@@ -1,0 +1,19 @@
+[Slide 1]
+HSE Town Hall: Dropped Objects
+Safety stand-down, all offshore crews
+
+[Slide 2]
+What happened
+A 2 kg spanner fell 18 m from the derrick on Contoso-15
+No injuries - the exclusion zone worked
+
+[Slide 3]
+Why it matters
+Dropped objects remain a top-3 cause of serious incidents in the industry
+Every tool at height must be tethered
+
+[Slide 4]
+Actions
+Tool tethering audit on all rigs by end of month
+Refresh Permit to Work training
+Report every near miss, no blame

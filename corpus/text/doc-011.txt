@@ -1,0 +1,13 @@
+Invoice FRS-INV-88213
+FICTIONAL - synthetic workshop material
+INVOICE
+Fabrikam Rig Services Ltd, Unit 4 Altens Industrial Estate, Aberdeen.
+Customer: Contoso Oil PLC. Invoice FRS-INV-88213 dated 31 March 2026.
+Agreement ref FAB-RMS-2026.
+Charges
+Monthly service fee March 2026: GBP 212,000.00
+Call-out 14 March, top drive fault Contoso-12, 11 hours: GBP 9,240.00
+Less 5% retention: GBP -11,062.00
+Total payable: GBP 210,178.00
+Payment
+Due 30 days after month end. Please quote invoice number on remittance.

@@ -1,0 +1,30 @@
+Rig Maintenance Services Agreement
+ FAB-RMS-2026
+FICTIONAL - synthetic workshop material
+Agreement
+This Rig Maintenance Services Agreement is entered into by Contoso Oil PLC ("Company") and
+Fabrikam Rig Services Ltd ("Contractor") on 15 January 2026.
+Contractor shall provide planned and corrective maintenance for drilling rigs Contoso-12 and
+Contoso-15, including top drives, mud pumps and BOP control systems.
+1. Scope and Service Levels
+1.1 Contractor shall respond to critical breakdowns within four (4) hours and restore operation
+within twenty-four (24) hours where spare parts are available on site.
+1.2 Planned maintenance follows the schedule in Appendix A.
+2. Compensation and Payment
+2.1 Company shall pay the monthly service fee of GBP 212,000 plus approved call-out charges at
+the rates in Appendix B.
+2.2 Invoices are issued monthly in arrears; payment is due thirty (30) days after the end of the
+month in which a valid invoice is received.
+2.3 Company shall withhold a retention of five percent (5%) of each payment, released upon
+acceptance of the annual maintenance audit.
+3. Term and Termination
+3.1 This Agreement remains in force for three (3) years.
+3.2 Company may terminate for convenience on sixty (60) days' written notice. Either party may
+terminate immediately for material breach not remedied within fourteen (14) days.
+4. HSE
+4.1 Contractor personnel shall comply with Company's Permit to Work policy and Life Saving Rules.
+Signatures
+Signed for and on behalf of CONTOSO OIL PLC: ____________________ Name: Ingrid
+Halvorsen, VP Supply Chain Date: ____________
+Signed for and on behalf of FABRIKAM RIG SERVICES LTD: ____________________ Name:
+Priya Raman, Managing Director Date: ____________

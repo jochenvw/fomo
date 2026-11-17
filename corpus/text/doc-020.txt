@@ -1,0 +1,10 @@
+Email: Query on Invoice FRS-INV-88213
+FICTIONAL - synthetic workshop material
+From: accounts.payable@contoso-oil.example
+To: billing@fabrikam-rig.example
+Date: 8 April 2026. Subject: Query on invoice FRS-INV-88213
+Hello Fabrikam billing team,
+We have received invoice FRS-INV-88213. The call-out on 14 March shows 11 hours but the rig log
+shows 9 hours. Could you please check and issue a credit note if appropriate? We will pay the
+undisputed amount on the normal due date.
+Kind regards, Accounts Payable, Contoso Oil

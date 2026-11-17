@@ -1,0 +1,207 @@
+{
+  "corpus_version": "2026.1",
+  "generator": "corpus/generator (python -m corpus.generator)",
+  "license": "MIT - fully synthetic, fictional content",
+  "documents": [
+    {
+      "doc_id": "doc-001",
+      "file": "originals/doc-001.pdf",
+      "sha256": "196bd04bbfad1f906e193d1e8f9a6b608b2dd8fc2939c738ed065c8f6379cc9d",
+      "title": "Offshore Supply Vessel Time Charter Agreement CW-OSV-2025-014",
+      "format": "pdf",
+      "bytes": 4022
+    },
+    {
+      "doc_id": "doc-002",
+      "file": "originals/doc-002.pdf",
+      "sha256": "44bdb236fb6653cd1e5b77a12e53c56d5073a7e4ce96ccf56ba5ebec3bdb9400",
+      "title": "Procurement Policy PP-07: Supplier Payment Terms",
+      "format": "pdf",
+      "bytes": 2754
+    },
+    {
+      "doc_id": "doc-003",
+      "file": "originals/doc-003.pptx",
+      "sha256": "289c426c48b50f74b46329bb807694dbadfea8b3ef23319bef677bd06a1df255",
+      "title": "Contract Management Excellence 2026",
+      "format": "pptx",
+      "bytes": 40123
+    },
+    {
+      "doc_id": "doc-004",
+      "file": "originals/doc-004.pdf",
+      "sha256": "852f56c1877742b71fb225f9fc8f0de0524a3a248d58d663bb01c2250e37f36b",
+      "title": "Rig Maintenance Services Agreement FAB-RMS-2026",
+      "format": "pdf",
+      "bytes": 3255
+    },
+    {
+      "doc_id": "doc-005",
+      "file": "originals/doc-005.pdf",
+      "sha256": "4e97db66a20bb5287e28167b99a3c1142f48c3c913bd83c29036ca84cbbda34f",
+      "title": "Invoice NMS-2026-0412",
+      "format": "pdf",
+      "bytes": 2501
+    },
+    {
+      "doc_id": "doc-006",
+      "file": "originals/doc-006.pdf",
+      "sha256": "a4faf915325b6deaf1209a55aec4883f655acd0231581fa1d1ae0e7a2715fae2",
+      "title": "In-Line Inspection Report: Export Pipeline Segment 14",
+      "format": "pdf",
+      "bytes": 2572
+    },
+    {
+      "doc_id": "doc-007",
+      "file": "originals/doc-007.pptx",
+      "sha256": "bd6e4ed1a57361f93608a437c81bac5f7afd36f0366effa83b24f475ea8b7795",
+      "title": "Q3 Drilling Campaign Update",
+      "format": "pptx",
+      "bytes": 31321
+    },
+    {
+      "doc_id": "doc-008",
+      "file": "originals/doc-008.pdf",
+      "sha256": "56e9ffbb7c73eeab34619050b0038a02a2bb5ef5e4ba8d97742d60f97d1c80b0",
+      "title": "Letter: Notice of Intent to Extend Vessel Charter",
+      "format": "pdf",
+      "bytes": 2473
+    },
+    {
+      "doc_id": "doc-009",
+      "file": "originals/doc-009.pdf",
+      "sha256": "590af77265ac3b26a0df31da29ae54da04bb4b60648847c6e8fb7e4c2b3b2794",
+      "title": "Master Purchase Terms for Drilling Consumables",
+      "format": "pdf",
+      "bytes": 3022
+    },
+    {
+      "doc_id": "doc-010",
+      "file": "originals/doc-010.pdf",
+      "sha256": "5fc22c4696090b142686b1d2ec35290be8428afc3066cd9b9a4be56c2a093f8a",
+      "title": "HSE Standard HS-03: Permit to Work",
+      "format": "pdf",
+      "bytes": 2499
+    },
+    {
+      "doc_id": "doc-011",
+      "file": "originals/doc-011.pdf",
+      "sha256": "03912086412497230e024b48f5ff342e24327345d89580980fbe4f2277fe1aef",
+      "title": "Invoice FRS-INV-88213",
+      "format": "pdf",
+      "bytes": 2343
+    },
+    {
+      "doc_id": "doc-012",
+      "file": "originals/doc-012.pdf",
+      "sha256": "deed556ccf0c66afbea9121f68cc0906e87f9e7f83c96ceff538c33d621f269e",
+      "title": "Corrosion Survey: Platform Bravo Risers",
+      "format": "pdf",
+      "bytes": 2331
+    },
+    {
+      "doc_id": "doc-013",
+      "file": "originals/doc-013.pdf",
+      "sha256": "649a85d53f58a8ec77db7f710f46ff6c7168791ad4856b3870bdb167e48d2327",
+      "title": "Pipeline Inspection Services Framework Agreement",
+      "format": "pdf",
+      "bytes": 2922
+    },
+    {
+      "doc_id": "doc-014",
+      "file": "originals/doc-014.pdf",
+      "sha256": "78b935c33952ead92bb6a0f99719d50623af9c4eb65c715678c9724dcda1def2",
+      "title": "Memo: Platform Alpha Coffee Stock-out Follow-up",
+      "format": "pdf",
+      "bytes": 2291
+    },
+    {
+      "doc_id": "doc-015",
+      "file": "originals/doc-015.pptx",
+      "sha256": "d35eb742be10c0d26a9d2a97392ff8f5dbf93e4976ddaa845c189e92cc81af85",
+      "title": "HSE Town Hall: Dropped Objects",
+      "format": "pptx",
+      "bytes": 31226
+    },
+    {
+      "doc_id": "doc-016",
+      "file": "originals/doc-016.pdf",
+      "sha256": "e13b6488f5375d50cc8956582fe6e98f813c2966deda7c34c5340a684de8946a",
+      "title": "Travel and Offshore Mobilisation Policy",
+      "format": "pdf",
+      "bytes": 2388
+    },
+    {
+      "doc_id": "doc-017",
+      "file": "originals/doc-017.pdf",
+      "sha256": "375f36790404b4112b755fa359b3691a4f6f590301c9931fadfd2232d926db7f",
+      "title": "Well Test Report: Contoso-7",
+      "format": "pdf",
+      "bytes": 2235
+    },
+    {
+      "doc_id": "doc-018",
+      "file": "originals/doc-018.pdf",
+      "sha256": "4d36c1bef326efafd4375d49a4824feb22db08be4a0f075a84585e9bb2097b48",
+      "title": "Offshore Catering and Coffee Supply Agreement",
+      "format": "pdf",
+      "bytes": 2930
+    },
+    {
+      "doc_id": "doc-019",
+      "file": "originals/doc-019.pdf",
+      "sha256": "2ad34f1380782f0ec409abde297771f9864a77075edcdb36b18350c97c56d3a3",
+      "title": "Invoice FC-2026-031",
+      "format": "pdf",
+      "bytes": 2303
+    },
+    {
+      "doc_id": "doc-020",
+      "file": "originals/doc-020.pdf",
+      "sha256": "649cd7c6b1666180fc0f9ac2676d7de239b3bb0d6bae9b6171ab1604b806b693",
+      "title": "Email: Query on Invoice FRS-INV-88213",
+      "format": "pdf",
+      "bytes": 2324
+    },
+    {
+      "doc_id": "doc-021",
+      "file": "originals/doc-021.pdf",
+      "sha256": "ce94058d759a581d6b03c59cc74336365b0dec531ab226b1200cef5d43051a0d",
+      "title": "Helicopter Crew Transfer Services Agreement",
+      "format": "pdf",
+      "bytes": 2833
+    },
+    {
+      "doc_id": "doc-022",
+      "file": "originals/doc-022.pptx",
+      "sha256": "345b48cb33f5c90878fdb63243035d61bd4575777fdbeb80b596c51ae2b53267",
+      "title": "Procurement Savings Roadmap 2026-2027",
+      "format": "pptx",
+      "bytes": 31219
+    },
+    {
+      "doc_id": "doc-023",
+      "file": "originals/doc-023.pdf",
+      "sha256": "65b9ffa256d9baea7dbee691fbc6353889d7d4c3d20bd9f1f8770dadb6a58983",
+      "title": "Maintenance Report: Rig Contoso-12 Top Drive Replacement",
+      "format": "pdf",
+      "bytes": 2395
+    },
+    {
+      "doc_id": "doc-024",
+      "file": "originals/doc-024.pdf",
+      "sha256": "0918bf6b90547c8d7284c22c9595191e318b24a4e177e8dcd02424090f368d7a",
+      "title": "Draft Heads of Terms and Call Notes: Subsea Support Vessel",
+      "format": "pdf",
+      "bytes": 2417
+    },
+    {
+      "doc_id": "doc-025",
+      "file": "originals/doc-025.pdf",
+      "sha256": "f1b129e9eb452429185005295d939e4683836e1477641efeab735eb7f3fb330b",
+      "title": "Gas Compression Train B Vibration Analysis",
+      "format": "pdf",
+      "bytes": 2425
+    }
+  ]
+}

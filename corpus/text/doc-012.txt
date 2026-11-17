@@ -1,0 +1,11 @@
+Corrosion Survey: Platform Bravo Risers
+FICTIONAL - synthetic workshop material
+Introduction
+ROV-based close visual inspection of risers R1-R6 on Platform Bravo, June 2026.
+Results
+Coating breakdown observed on R3 in the splash zone (approx. 2.1 m2).
+Anode depletion estimated at 62% on R5; remaining life approx. 4 years.
+No significant marine growth exceeding design allowance.
+Recommendations
+Recoat R3 splash zone in the 2027 campaign.
+Install retrofit anodes on R5 within 24 months.

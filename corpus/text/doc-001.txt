@@ -1,0 +1,36 @@
+Offshore Supply Vessel Time Charter Agreement
+ CW-OSV-2025-014
+FICTIONAL - synthetic workshop material
+Parties
+This Time Charter Agreement (the "Agreement") is made between Contoso Oil PLC, Harbour
+House, Aberdeen (the "Charterer") and Northwind Marine Services AS, Stavanger (the "Owner"),
+each a "Party".
+The Owner agrees to let and the Charterer agrees to hire the platform supply vessel MV Northwind
+Petrel (IMO 9900014) for supply runs to the Bravo and Delta platforms.
+1. Term
+1.1 The charter period is twenty-four (24) months from the delivery date of 1 March 2026, with two
+optional extension periods of six (6) months each.
+1.2 Either Party may terminate this Agreement on ninety (90) days' written notice after the first
+twelve months.
+2. Hire and Payment Terms
+2.1 The day rate is EUR 18,450 per day, payable monthly in arrears.
+2.2 Payment terms: the Charterer shall pay each correct invoice within forty-five (45) days of receipt
+of invoice.
+2.3 Late payment interest of 1.5% per month shall accrue on undisputed amounts unpaid after the
+due date.
+2.4 Fuel, lubricants and port dues are for the Charterer's account at cost, without mark-up.
+3. Off-hire
+3.1 No hire is payable for any period exceeding six (6) consecutive hours during which the vessel is
+unable to perform due to breakdown or crew deficiency.
+4. Liability and Insurance
+4.1 Each Party shall be responsible for injury to its own personnel and loss of its own property,
+regardless of fault (knock-for-knock).
+4.2 The Owner shall maintain hull and machinery and P&I insurance for the term.
+5. Governing Law
+5.1 This Agreement is governed by English law. Disputes shall be referred to arbitration in London.
+Signatures
+
+Signed for and on behalf of CONTOSO OIL PLC: ____________________ Name: Ingrid
+Halvorsen, VP Supply Chain Date: ____________
+Signed for and on behalf of NORTHWIND MARINE SERVICES AS: ____________________
+Name: Lars Eikeland, Commercial Director Date: ____________

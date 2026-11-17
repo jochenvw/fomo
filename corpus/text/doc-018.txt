@@ -1,0 +1,26 @@
+Offshore Catering and Coffee Supply Agreement
+FICTIONAL - synthetic workshop material
+Agreement
+This Offshore Catering and Coffee Supply Agreement is made between Contoso Oil PLC
+("Contoso") and Fourth Coffee Offshore Ltd ("Supplier") following what the operations team still
+calls the Great Offshore Coffee Supply Debacle of 2025.
+Supplier shall provide catering, galley staff and an uninterrupted supply of coffee to platforms
+Alpha, Bravo and Delta.
+1. Service Levels
+1.1 Supplier shall maintain a minimum of fourteen (14) days of coffee stock on each platform at all
+times.
+1.2 A coffee stock-out exceeding twelve (12) hours is a Service Failure.
+2. Charges and Payment
+2.1 Charges are GBP 38.50 per person on board per day.
+2.2 Contoso shall pay each valid monthly invoice within thirty (30) days of receipt.
+2.3 Each Service Failure entitles Contoso to a service credit of GBP 2,500, deducted from the next
+invoice.
+3. Term and Termination
+3.1 The term is two (2) years from 1 May 2026.
+3.2 Contoso may terminate on thirty (30) days' notice after three Service Failures in any rolling
+six-month period.
+Signatures
+Signed for and on behalf of CONTOSO OIL PLC: ____________________ Name: Ingrid
+Halvorsen, VP Supply Chain Date: ____________
+Signed for and on behalf of FOURTH COFFEE OFFSHORE LTD: ____________________ Name:
+Marco Bellini, Director Date: ____________

@@ -1,0 +1,12 @@
+Maintenance Report: Rig Contoso-12 Top Drive
+ Replacement
+FICTIONAL - synthetic workshop material
+Summary
+Top drive TD-500 on rig Contoso-12 was replaced during the planned maintenance window 14-17
+March 2026 by Fabrikam Rig Services after repeated gearbox vibration alarms.
+Findings
+Gearbox bearing spalling on the intermediate shaft; lube oil iron content 180 ppm.
+Root cause: lubrication contamination following a filter bypass.
+Actions
+Install differential pressure alarm on the lube filter.
+Add oil analysis to the monthly maintenance checklist.

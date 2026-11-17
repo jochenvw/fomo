@@ -1,0 +1,10 @@
+Well Test Report: Contoso-7
+FICTIONAL - synthetic workshop material
+Overview
+Drill stem test performed on Contoso-7, Delta field, 2-5 August 2026.
+Results
+Stabilised oil rate: 6,240 stb/d on a 48/64 choke.
+Gas-oil ratio: 610 scf/stb. Water cut: 2%.
+Reservoir pressure: 312 bar at datum. Skin: +1.4.
+Conclusions
+Results support completion as a producer; no sand production observed.

@@ -1,0 +1,26 @@
+Master Purchase Terms for Drilling Consumables
+FICTIONAL - synthetic workshop material
+Master Purchase Terms
+These Master Purchase Terms (the "Terms") are agreed between Contoso Oil PLC ("Buyer") and
+Litware Drilling Supplies BV ("Seller") and govern every purchase order for drilling consumables,
+including drill bits, casing centralisers and drilling fluid additives.
+1. Orders
+1.1 Each purchase order issued by Buyer and acknowledged by Seller forms a binding commitment
+on these Terms.
+1.2 Seller shall deliver DAP Aberdeen supply base within ten (10) working days.
+2. Price and Settlement
+2.1 Prices are fixed for calendar year 2026 per the attached price schedule.
+2.2 Buyer shall settle each correct invoice sixty (60) days end of month.
+2.3 An early settlement discount of two percent (2%) applies where Buyer pays within ten (10) days
+of invoice.
+3. Warranty
+3.1 Seller warrants that goods conform to API specifications and are free of defects for twelve (12)
+months from delivery.
+4. Duration
+4.1 These Terms apply from 1 February 2026 until 31 January 2028 and may be ended by either
+side with thirty (30) days' notice in writing.
+Acceptance
+Signed for and on behalf of CONTOSO OIL PLC: ____________________ Name: Ingrid
+Halvorsen, VP Supply Chain Date: ____________
+Signed for and on behalf of LITWARE DRILLING SUPPLIES BV: ____________________ Name:
+Jan de Vries, Sales Director Date: ____________

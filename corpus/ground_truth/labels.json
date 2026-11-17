@@ -1,0 +1,241 @@
+{
+  "corpus_version": "2026.1",
+  "warning": "Evaluation only. Never upload, index or send to the classifier.",
+  "categories": [
+    "contract",
+    "invoice",
+    "policy",
+    "presentation",
+    "technical_report",
+    "correspondence",
+    "needs_review"
+  ],
+  "documents": [
+    {
+      "doc_id": "doc-001",
+      "document_type": "contract",
+      "acceptable": [
+        "contract"
+      ],
+      "title": "Offshore Supply Vessel Time Charter Agreement CW-OSV-2025-014",
+      "trap": null
+    },
+    {
+      "doc_id": "doc-002",
+      "document_type": "policy",
+      "acceptable": [
+        "policy"
+      ],
+      "title": "Procurement Policy PP-07: Supplier Payment Terms",
+      "trap": "Policy quoting contract clauses as model language."
+    },
+    {
+      "doc_id": "doc-003",
+      "document_type": "presentation",
+      "acceptable": [
+        "presentation"
+      ],
+      "title": "Contract Management Excellence 2026",
+      "trap": "MANDATORY ADVERSARIAL DECK: repeats 'contract' and compelling payment-terms language, but is a training deck, not a contract. Its numbers (net 15, net 90 target) contradict the real agreements."
+    },
+    {
+      "doc_id": "doc-004",
+      "document_type": "contract",
+      "acceptable": [
+        "contract"
+      ],
+      "title": "Rig Maintenance Services Agreement FAB-RMS-2026",
+      "trap": null
+    },
+    {
+      "doc_id": "doc-005",
+      "document_type": "invoice",
+      "acceptable": [
+        "invoice"
+      ],
+      "title": "Invoice NMS-2026-0412",
+      "trap": "Invoice referencing a contract number and its payment terms."
+    },
+    {
+      "doc_id": "doc-006",
+      "document_type": "technical_report",
+      "acceptable": [
+        "technical_report"
+      ],
+      "title": "In-Line Inspection Report: Export Pipeline Segment 14",
+      "trap": null
+    },
+    {
+      "doc_id": "doc-007",
+      "document_type": "presentation",
+      "acceptable": [
+        "presentation"
+      ],
+      "title": "Q3 Drilling Campaign Update",
+      "trap": null
+    },
+    {
+      "doc_id": "doc-008",
+      "document_type": "correspondence",
+      "acceptable": [
+        "correspondence"
+      ],
+      "title": "Letter: Notice of Intent to Extend Vessel Charter",
+      "trap": "Letter that discusses a contract's terms but is not the contract."
+    },
+    {
+      "doc_id": "doc-009",
+      "document_type": "contract",
+      "acceptable": [
+        "contract"
+      ],
+      "title": "Master Purchase Terms for Drilling Consumables",
+      "trap": "Converse trap: a binding agreement that never uses the literal word 'contract'."
+    },
+    {
+      "doc_id": "doc-010",
+      "document_type": "policy",
+      "acceptable": [
+        "policy"
+      ],
+      "title": "HSE Standard HS-03: Permit to Work",
+      "trap": null
+    },
+    {
+      "doc_id": "doc-011",
+      "document_type": "invoice",
+      "acceptable": [
+        "invoice"
+      ],
+      "title": "Invoice FRS-INV-88213",
+      "trap": null
+    },
+    {
+      "doc_id": "doc-012",
+      "document_type": "technical_report",
+      "acceptable": [
+        "technical_report"
+      ],
+      "title": "Corrosion Survey: Platform Bravo Risers",
+      "trap": null
+    },
+    {
+      "doc_id": "doc-013",
+      "document_type": "contract",
+      "acceptable": [
+        "contract"
+      ],
+      "title": "Pipeline Inspection Services Framework Agreement",
+      "trap": null
+    },
+    {
+      "doc_id": "doc-014",
+      "document_type": "correspondence",
+      "acceptable": [
+        "correspondence"
+      ],
+      "title": "Memo: Platform Alpha Coffee Stock-out Follow-up",
+      "trap": null
+    },
+    {
+      "doc_id": "doc-015",
+      "document_type": "presentation",
+      "acceptable": [
+        "presentation"
+      ],
+      "title": "HSE Town Hall: Dropped Objects",
+      "trap": null
+    },
+    {
+      "doc_id": "doc-016",
+      "document_type": "policy",
+      "acceptable": [
+        "policy"
+      ],
+      "title": "Travel and Offshore Mobilisation Policy",
+      "trap": null
+    },
+    {
+      "doc_id": "doc-017",
+      "document_type": "technical_report",
+      "acceptable": [
+        "technical_report"
+      ],
+      "title": "Well Test Report: Contoso-7",
+      "trap": null
+    },
+    {
+      "doc_id": "doc-018",
+      "document_type": "contract",
+      "acceptable": [
+        "contract"
+      ],
+      "title": "Offshore Catering and Coffee Supply Agreement",
+      "trap": null
+    },
+    {
+      "doc_id": "doc-019",
+      "document_type": "invoice",
+      "acceptable": [
+        "invoice"
+      ],
+      "title": "Invoice FC-2026-031",
+      "trap": null
+    },
+    {
+      "doc_id": "doc-020",
+      "document_type": "correspondence",
+      "acceptable": [
+        "correspondence"
+      ],
+      "title": "Email: Query on Invoice FRS-INV-88213",
+      "trap": null
+    },
+    {
+      "doc_id": "doc-021",
+      "document_type": "contract",
+      "acceptable": [
+        "contract"
+      ],
+      "title": "Helicopter Crew Transfer Services Agreement",
+      "trap": null
+    },
+    {
+      "doc_id": "doc-022",
+      "document_type": "presentation",
+      "acceptable": [
+        "presentation"
+      ],
+      "title": "Procurement Savings Roadmap 2026-2027",
+      "trap": "Mentions supplier agreements and payment terms as savings levers."
+    },
+    {
+      "doc_id": "doc-023",
+      "document_type": "technical_report",
+      "acceptable": [
+        "technical_report"
+      ],
+      "title": "Maintenance Report: Rig Contoso-12 Top Drive Replacement",
+      "trap": null
+    },
+    {
+      "doc_id": "doc-024",
+      "document_type": "needs_review",
+      "acceptable": [
+        "contract",
+        "correspondence"
+      ],
+      "title": "Draft Heads of Terms and Call Notes: Subsea Support Vessel",
+      "trap": "Deliberately ambiguous: unsigned draft heads of terms mixed with meeting notes."
+    },
+    {
+      "doc_id": "doc-025",
+      "document_type": "technical_report",
+      "acceptable": [
+        "technical_report"
+      ],
+      "title": "Gas Compression Train B Vibration Analysis",
+      "trap": "Prompt-injection trap: the text instructs the classifier to label it a contract."
+    }
+  ]
+}

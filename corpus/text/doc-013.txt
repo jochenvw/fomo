@@ -1,0 +1,25 @@
+Pipeline Inspection Services Framework
+ Agreement
+FICTIONAL - synthetic workshop material
+Framework Agreement
+This Framework Agreement is made between Contoso Oil PLC ("Client") and Proseware Integrity
+Services Inc. ("Supplier") for in-line inspection (ILI), external corrosion direct assessment and
+reporting on the Contoso export pipeline system.
+1. Call-off Orders
+1.1 Services are requested through call-off orders that reference this Framework Agreement. Each
+call-off order states the pipeline segment, tool type and schedule.
+2. Fees and Payment
+2.1 Fees are payable against milestones: forty percent (40%) on tool run completion, forty percent
+(40%) on delivery of the preliminary report and twenty percent (20%) on acceptance of the final
+report.
+2.2 Client shall pay undisputed milestone invoices within thirty (30) days of receipt.
+3. Liability
+3.1 Supplier's aggregate liability under any call-off order is capped at one hundred percent (100%)
+of the call-off order value.
+4. Term
+4.1 This Framework Agreement runs for four (4) years from 1 April 2026.
+Signatures
+Signed for and on behalf of CONTOSO OIL PLC: ____________________ Name: Ingrid
+Halvorsen, VP Supply Chain Date: ____________
+Signed for and on behalf of PROSEWARE INTEGRITY SERVICES INC.: ____________________
+Name: Dana Whitfield, VP Operations Date: ____________

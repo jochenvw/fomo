@@ -1,0 +1,26 @@
+# Workshop configuration (optional). Usually unnecessary: the facilitator runs
+#   uv run contoso env pull --resource-group <rg>
+# which writes .workshop/environment.json from the Bicep deployment outputs.
+#
+# Use this file for reuse-existing setups or to point at another environment:
+#   uv run contoso status --config examples/config.example.yaml
+#
+# Precedence (low -> high): this file -> .workshop/environment.json -> CONTOSO_* env vars -> CLI flags.
+environment:
+  subscription_id: 00000000-0000-0000-0000-000000000000
+  resource_group: rg-contoso-oil-dev
+  location: swedencentral
+  topology: shared            # shared = one Foundry/Search/Storage for the cohort; isolated = per participant
+
+  foundry_account_name: contosooil-abc123
+  project_name: contoso-oil
+  # project_endpoint: https://contosooil-abc123.services.ai.azure.com/api/projects/contoso-oil
+
+  chat_deployment: gpt-5-mini
+  embedding_deployment: text-embedding-3-small
+  embedding_dimensions: 1536
+  decision_deployment: decision-1   # Microsoft-Decision-1
+
+  storage_account_name: contosooilstabc123
+  search_service_name: contosooil-srch-abc123
+  search_connection_name: contoso-search

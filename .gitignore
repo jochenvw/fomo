@@ -1,0 +1,32 @@
+# Python / uv
+.venv/
+__pycache__/
+*.py[cod]
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+dist/
+build/
+*.egg-info/
+
+# Workshop runtime state: environment, per-participant runs, logs, traces, readiness reports
+.workshop/
+
+# Local, never-public facilitator files (real parameter files, scratch output)
+.local/
+*.local.bicepparam
+
+# Secrets (none are needed; Entra ID only)
+.env
+*.pem
+*.pfx
+
+# Bicep build output
+infra/**/*.json
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json

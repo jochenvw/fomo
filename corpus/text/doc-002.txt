@@ -1,0 +1,18 @@
+Procurement Policy PP-07: Supplier Payment
+ Terms
+FICTIONAL - synthetic workshop material
+Purpose and Scope
+This policy applies to all Contoso Oil employees who negotiate, approve or administer supplier
+agreements. It defines default payment terms and approval thresholds.
+Policy Requirements
+R1. The default payment term for new supplier contracts is thirty (30) days from receipt of a valid
+invoice.
+R2. Payment terms longer than sixty (60) days require CFO approval.
+R3. Small and medium suppliers must be offered terms no longer than thirty (30) days.
+R4. Early settlement discounts may be accepted only where Treasury confirms liquidity.
+Model Clause (for reference only)
+Contract templates should use: "The Company shall pay each correct invoice within thirty (30) days
+of receipt." This model clause is guidance and does not itself create obligations with any supplier.
+Responsibilities
+Category managers own compliance. Internal Audit reviews a sample of agreements yearly.
+Policy owner: Head of Procurement. Effective date: 1 January 2026.

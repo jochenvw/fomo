@@ -1,0 +1,14 @@
+Invoice NMS-2026-0412
+FICTIONAL - synthetic workshop material
+INVOICE
+Northwind Marine Services AS, Strandkaien 9, Stavanger, Norway. VAT NO 999 888 777.
+Bill to: Contoso Oil PLC, Accounts Payable, Harbour House, Aberdeen.
+Invoice number: NMS-2026-0412. Invoice date: 30 April 2026. Contract reference:
+CW-OSV-2025-014. PO: 4500012345.
+Line items
+MV Northwind Petrel day rate, 1-30 April 2026: 30 days x EUR 18,450 = EUR 553,500.00
+Off-hire deduction, 12 April (9 hours): EUR -6,918.75
+Subtotal: EUR 546,581.25. VAT reverse charge. Total due: EUR 546,581.25
+Remittance
+Payment terms: 45 days from receipt, as per contract CW-OSV-2025-014.
+Bank: Woodgrove Bank, IBAN NO00 0000 0000 000 (fictional).

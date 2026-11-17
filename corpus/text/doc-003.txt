@@ -1,0 +1,40 @@
+[Slide 1]
+Contract Management Excellence 2026
+Supply Chain Academy - contract management training
+Why every contract manager should care about payment terms
+Notes: Welcome everyone. This deck is about how we manage contracts, not a contract itself.
+
+[Slide 2]
+Agenda
+Contract lifecycle: plan, award, manage, close
+Payment terms in our supplier contracts
+Contract KPIs and the contract register
+Q&A
+
+[Slide 3]
+Payment terms in supplier contracts
+Contract payment terms define when the supplier gets paid under the contract
+Typical contract payment terms: net 15 days for small suppliers
+Ambition: harmonise all supplier contracts to net 90 days by 2027
+Late payment interest clauses must be reviewed by the contract owner
+Notes: These are aspirations and examples for discussion, not agreed terms.
+
+[Slide 4]
+Contract clauses every contract owner must know
+Payment: 'The Company shall pay within X days of receipt of invoice'
+Termination for convenience and notice periods
+Liability caps and indemnities (knock-for-knock)
+Retention and milestone payments
+
+[Slide 5]
+Contract KPIs
+Contracts expiring in the next 90 days: 14
+Average contract payment cycle: 41 days
+Contracts with missing contract owner: 3 (fix this!)
+
+[Slide 6]
+Key takeaways
+Read the contract, not the deck
+Payment terms live in the signed contract and its schedules
+Questions? supplychain-academy@contoso-oil.example
+Notes: Remember: the signed agreement always wins over this training material.

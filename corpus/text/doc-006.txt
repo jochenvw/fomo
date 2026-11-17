@@ -1,0 +1,15 @@
+In-Line Inspection Report: Export Pipeline Segment
+ 14
+FICTIONAL - synthetic workshop material
+Summary
+A magnetic flux leakage (MFL) in-line inspection of Export Pipeline Segment 14 (KP 112 to KP 138,
+24-inch) was completed on 9 February 2026 by Proseware Integrity Services under call-off order
+03.
+Findings: 37 external metal-loss features were reported; the deepest is 41% wall loss at KP 127.4.
+No features exceed the repair criterion of 60% wall loss.
+Method
+Tool: 24-inch MFL high-resolution tool. Speed 1.8 m/s. Data coverage 99.2%.
+Sizing tolerance: depth +/- 10% wt at 80% confidence.
+Recommendations
+1. Excavate and verify the KP 127.4 feature within 12 months.
+2. Repeat ILI in 2029 or earlier if cathodic protection surveys show shortfalls.

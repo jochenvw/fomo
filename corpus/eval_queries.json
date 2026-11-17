@@ -1,0 +1,113 @@
+{
+  "corpus_version": "2026.1",
+  "k": 5,
+  "queries": [
+    {
+      "id": "q01",
+      "question": "What payment terms apply under our supplier contracts?",
+      "canonical": true,
+      "relevant_doc_ids": [
+        "doc-001",
+        "doc-004",
+        "doc-009",
+        "doc-013",
+        "doc-018",
+        "doc-021"
+      ],
+      "desired_filter": "document_type eq 'contract'",
+      "evidence": {
+        "doc-001": "within forty-five (45) days of receipt of invoice",
+        "doc-004": "payment is due thirty (30) days after the end of the month",
+        "doc-009": "sixty (60) days end of month",
+        "doc-013": "within thirty (30) days of receipt",
+        "doc-018": "within thirty (30) days of receipt",
+        "doc-021": "within thirty (30) days of the invoice date"
+      },
+      "expect": "filter helps: the contract-management deck and PP-07 policy compete in raw results"
+    },
+    {
+      "id": "q02",
+      "question": "What late payment interest applies to the supply vessel charter?",
+      "relevant_doc_ids": [
+        "doc-001"
+      ],
+      "desired_filter": "document_type eq 'contract'",
+      "evidence": {
+        "doc-001": "Late payment interest of 1.5% per month"
+      },
+      "expect": "little difference: specific wording already retrieves the charter"
+    },
+    {
+      "id": "q03",
+      "question": "Which supplier agreements offer a discount for early payment?",
+      "relevant_doc_ids": [
+        "doc-009"
+      ],
+      "desired_filter": "document_type eq 'contract'",
+      "evidence": {
+        "doc-009": "early settlement discount of two percent (2%)"
+      },
+      "expect": "converse trap: doc-009 avoids the word contract; deck mentions discounts"
+    },
+    {
+      "id": "q04",
+      "question": "How much retention is withheld from rig maintenance payments?",
+      "relevant_doc_ids": [
+        "doc-004"
+      ],
+      "desired_filter": "document_type eq 'contract'",
+      "evidence": {
+        "doc-004": "retention of five percent (5%)"
+      },
+      "expect": "invoice doc-011 also mentions 5% retention; filter keeps the agreement"
+    },
+    {
+      "id": "q05",
+      "question": "What did the in-line inspection of export pipeline segment 14 find?",
+      "relevant_doc_ids": [
+        "doc-006"
+      ],
+      "desired_filter": null,
+      "evidence": {
+        "doc-006": "37 external metal-loss features"
+      },
+      "expect": "contract filter HARMS: the fixed contracts scope excludes the report"
+    },
+    {
+      "id": "q06",
+      "question": "How much were we invoiced for the emergency coffee airlift in March?",
+      "relevant_doc_ids": [
+        "doc-019"
+      ],
+      "desired_filter": "document_type eq 'invoice'",
+      "evidence": {
+        "doc-019": "emergency airlift, 6 March): GBP 4,880.00"
+      },
+      "expect": "contract filter HARMS; an invoice filter would help"
+    },
+    {
+      "id": "q07",
+      "question": "What notice period applies to terminating the rig maintenance agreement for convenience?",
+      "relevant_doc_ids": [
+        "doc-004"
+      ],
+      "desired_filter": "document_type eq 'contract'",
+      "evidence": {
+        "doc-004": "terminate for convenience on sixty (60) days' written notice"
+      },
+      "expect": "little difference"
+    },
+    {
+      "id": "q08",
+      "question": "What is our default payment term policy for new suppliers?",
+      "relevant_doc_ids": [
+        "doc-002"
+      ],
+      "desired_filter": "document_type eq 'policy'",
+      "evidence": {
+        "doc-002": "default payment term for new supplier contracts is thirty (30) days"
+      },
+      "expect": "contract filter HARMS: the answer lives in a policy"
+    }
+  ]
+}

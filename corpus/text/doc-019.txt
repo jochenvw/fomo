@@ -1,0 +1,13 @@
+Invoice FC-2026-031
+FICTIONAL - synthetic workshop material
+INVOICE
+Fourth Coffee Offshore Ltd. Invoice FC-2026-031. Date: 31 March 2026.
+To: Contoso Oil PLC, Platform Services.
+Items
+Catering, Platform Alpha, 2,790 person-days x GBP 38.50 = GBP 107,415.00
+Catering, Platform Bravo, 3,100 person-days x GBP 38.50 = GBP 119,350.00
+Premium coffee beans (emergency airlift, 6 March): GBP 4,880.00
+Service credit, stock-out 5-6 March: GBP -2,500.00
+Total: GBP 229,145.00
+Terms
+Payable within 30 days of receipt.

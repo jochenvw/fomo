@@ -1,0 +1,14 @@
+HSE Standard HS-03: Permit to Work
+FICTIONAL - synthetic workshop material
+Scope
+Applies to all work on Contoso Oil installations, including contractors.
+Mandatory Requirements
+1. No hot work, confined space entry or work at height without a valid permit.
+2. Permits are valid for one shift only and must be revalidated at shift handover.
+3. Isolations must be verified by an authorised person before work starts.
+4. Simultaneous operations require an approved SIMOPS plan.
+Responsibilities
+Offshore Installation Manager: approves high-risk permits.
+Area Authority: verifies site conditions. Performing Authority: leads the work party.
+Non-compliance
+Breaches are investigated under the Just Culture framework.

@@ -1,0 +1,6 @@
+# Normalize text to LF everywhere (corpus checks and checksums must match across OSes).
+* text=auto eol=lf
+*.ps1 text eol=crlf
+
+# Corpus originals are checksummed in corpus/manifest.json; never let Git rewrite their bytes.
+corpus/originals/** binary
