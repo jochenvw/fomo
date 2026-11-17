@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import Mock
 
 import pytest
 
+from contoso_workshop import preflight
+from contoso_workshop.errors import PermissionDenied, WorkshopError
 from contoso_workshop.preflight import BLOCKED, INFO, PASS, REPO_ROOT, WARNING, Report, _skill_ok, effective, scrub
 
 PERMS = [
@@ -91,3 +94,170 @@ def test_good_skill_with_crlf(tmp_path: Path):
     path.parent.mkdir()
     path.write_bytes(b"---\r\nname: my-skill\r\ndescription: does things\r\n---\r\nbody\r\n")
     assert _skill_ok(path)
+
+
+@pytest.mark.parametrize("allowed", [True, False, None])
+@pytest.mark.parametrize("resource", ["storage", "project", "model-chat", "container", "cosmic-wombat-raw"])
+def test_missing_resource_creation_readiness(monkeypatch, env, names, resource, allowed):
+    report = Report("now", 1)
+    paths = {
+        "storage": env.resolved_storage_account_id(),
+        "project": f"{env.foundry_account_id}/projects/{env.project_name}",
+    }
+    cid = "models.chat" if resource == "model-chat" else f"resources.{resource}"
+    report.add(cid, "resources", resource, BLOCKED, "not found", data={"missing": True})
+    rg = f"/subscriptions/{env.subscription_id}/resourceGroups/{env.resource_group}"
+    calls = []
+
+    def permissions(scope):
+        calls.append(scope)
+        if allowed is None:
+            raise WorkshopError("permissions API unavailable")
+        return [{"actions": ["*"] if allowed else []}]
+
+    monkeypatch.setattr(preflight, "permissions", permissions)
+    preflight._control_plane(report, env, rg, {"missing": [paths[resource]] if resource in paths else []},
+                             participant=names.hackername)
+    checks = {c.id: c for c in report.checks}
+    creation = checks[f"rbac.provision-{resource}"]
+    assert creation.status == (PASS if allowed else BLOCKED)
+    assert checks[cid].status == BLOCKED  # creation RBAC never makes a missing resource ready
+    assert checks[cid].owner == ("participant" if allowed else "facilitator")
+    if allowed:
+        assert "subject to approval" in checks[cid].fix
+        assert "--plan" in checks[cid].fix
+        assert ("contoso provision" in checks[cid].fix) == (
+            resource in ("container", "cosmic-wombat-raw"))
+    elif allowed is False:
+        assert "provision this resource for you" in checks[cid].fix
+    else:
+        assert "permissions unknown" in checks[cid].fix
+    assert len(calls) == len(set(calls))
+
+
+def test_missing_storage_does_not_skip_other_permission_checks(monkeypatch, env):
+    report = Report("now", 1)
+    report.add("resources.storage", "resources", "Storage", BLOCKED)
+    rg = f"/subscriptions/{env.subscription_id}/resourceGroups/{env.resource_group}"
+
+    def permissions(scope):
+        assert scope != env.resolved_storage_account_id()
+        if scope == rg:
+            return [{"actions": ["Microsoft.Storage/storageAccounts/write"]}]
+        return [{"actions": [], "dataActions": ["*"]}]
+
+    monkeypatch.setattr(preflight, "permissions", permissions)
+    preflight._control_plane(report, env, rg, {"missing": [env.resolved_storage_account_id()]})
+    checks = {c.id: c for c in report.checks}
+    assert checks["rbac.provision-storage"].status == PASS
+    assert checks["rbac.agents"].status == PASS
+    assert checks["rbac.blob"].status == BLOCKED  # management write does not grant blob write
+
+
+def test_existing_resources_do_not_require_creation_rights_and_use_container_scope(monkeypatch, env, names):
+    report = Report("now", 1)
+    rg = f"/subscriptions/{env.subscription_id}/resourceGroups/{env.resource_group}"
+    container_scope = f"{env.resolved_storage_account_id()}/blobServices/default/containers/{names.container}"
+    calls = []
+
+    def permissions(scope):
+        calls.append(scope)
+        return [{"actions": [], "dataActions": ["*"] if scope == container_scope else []}]
+
+    monkeypatch.setattr(preflight, "permissions", permissions)
+    preflight._control_plane(report, env, rg, {}, participant=names.hackername)
+    checks = {c.id: c for c in report.checks}
+    assert checks["rbac.provision-storage"].status == INFO
+    assert not checks["rbac.provision-storage"].required
+    assert checks["rbac.blob"].status == PASS
+    assert checks["rbac.blob-read"].status == PASS
+    assert container_scope in calls
+    assert checks["rbac.grant-agent"].status == BLOCKED
+
+
+@pytest.mark.parametrize("denied", [False, True])
+def test_resources_distinguish_missing_from_inaccessible(monkeypatch, env, denied):
+    def arm(method, path, api, **kwargs):
+        assert method == "GET"
+        if denied:
+            raise PermissionDenied("HTTP 403", owner="facilitator")
+        return Mock(status_code=404)
+
+    monkeypatch.setattr(preflight, "arm", arm)
+    report = Report("now", 1)
+    shared = preflight._resources(report, env, "rg")
+    assert (env.resolved_storage_account_id() in shared.get("missing", [])) is not denied
+    assert all(c.status == BLOCKED for c in report.checks)
+
+
+def test_participant_resources_inspect_all_objects_without_writing(monkeypatch, env, names):
+    monkeypatch.setattr(preflight, "credential", lambda: None)
+    container = Mock()
+    container.exists.return_value = False
+    monkeypatch.setattr("contoso_workshop.data.blob.ParticipantContainer", lambda *args: container)
+    search = Mock()
+    search.get.side_effect = lambda kind, name: {} if name == names.raw_index else None
+    monkeypatch.setattr("contoso_workshop.search.client.SearchClient", lambda *args: search)
+    report = Report("now", 1)
+    preflight._participant_resources(report, env, names.hackername)
+    checks = {c.id: c for c in report.checks}
+    assert len(checks) == 8
+    assert checks["resources.container"].data["missing"]
+    assert checks[f"resources.{names.raw_index}"].status == PASS
+    assert checks[f"resources.{names.smart_index}"].data["missing"]
+    assert [call[0] for call in container.method_calls] == ["exists"]
+    assert all(call[0] == "get" for call in search.method_calls)
+
+
+def test_unavailable_storage_permissions_do_not_hide_foundry_or_search(monkeypatch, env):
+    report = Report("now", 1)
+    rg = f"/subscriptions/{env.subscription_id}/resourceGroups/{env.resource_group}"
+
+    def permissions(scope):
+        if scope == env.resolved_storage_account_id():
+            raise PermissionDenied("cannot inspect Storage permissions")
+        return [{"actions": ["*"], "dataActions": ["*"]}]
+
+    monkeypatch.setattr(preflight, "permissions", permissions)
+    preflight._control_plane(report, env, rg, {})
+    checks = {c.id: c for c in report.checks}
+    assert checks["rbac.blob"].status == BLOCKED
+    assert "unknown" in checks["rbac.blob"].evidence
+    assert checks["rbac.agents"].status == PASS
+    assert checks["rbac.search-documents"].status == PASS
+
+
+def test_missing_models_record_presence_and_account_scoped_creation_permission(monkeypatch, env):
+    monkeypatch.setattr(preflight, "arm", lambda *args: Mock(json=lambda: {"value": []}))
+    report = Report("now", 1)
+    preflight._models(report, env)
+    rg = f"/subscriptions/{env.subscription_id}/resourceGroups/{env.resource_group}"
+
+    def permissions(scope):
+        return [{"actions": ["Microsoft.CognitiveServices/accounts/deployments/write"]
+                 if scope == env.foundry_account_id else []}]
+
+    monkeypatch.setattr(preflight, "permissions", permissions)
+    preflight._control_plane(report, env, rg, {})
+    checks = {c.id: c for c in report.checks}
+    for role in ("chat", "embedding", "decision"):
+        assert checks[f"models.{role}"].data["missing"]
+        assert "subject to approval" in checks[f"models.{role}"].fix
+        assert checks[f"rbac.provision-model-{role}"].status == PASS
+    assert checks["rbac.provision-foundry"].status == INFO
+
+
+@pytest.mark.parametrize("writer", [False, True])
+def test_search_document_access_uses_registered_read_and_write_actions(monkeypatch, env, writer):
+    actions = ["Microsoft.Search/searchServices/indexes/documents/read"]
+    if writer:
+        actions.append("Microsoft.Search/searchServices/indexes/documents/write")
+    monkeypatch.setattr(preflight, "permissions", lambda scope: [
+        {"actions": [], "dataActions": actions if scope == env.search_service_id else []},
+    ])
+    report = Report("now", 1)
+    rg = f"/subscriptions/{env.subscription_id}/resourceGroups/{env.resource_group}"
+    preflight._control_plane(report, env, rg, {})
+    checks = {c.id: c for c in report.checks}
+    assert checks["rbac.search-read"].status == PASS
+    assert checks["rbac.search-documents"].status == (PASS if writer else BLOCKED)

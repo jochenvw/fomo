@@ -252,7 +252,13 @@ def azure_checks(report: Report, env: Environment, *, participant: str | None, s
     shared = _resources(report, env, rg)
     _models(report, env)
     _policy(report, env, rg, shared)
-    _control_plane(report, env, rg)
+    if participant:
+        _participant_resources(report, env, participant)
+    else:
+        report.add("resources.participant", "resources", "Participant resources", INFO,
+                   "no participant selected; container/index existence and container-scoped RBAC not checked",
+                   required=False)
+    _control_plane(report, env, rg, shared, participant=participant)
     _pim(report, rg)
     _data_plane(report, env, participant)
     _identities(report, env, shared)
@@ -290,7 +296,11 @@ def _resources(report: Report, env: Environment, rg: str) -> dict[str, Any]:
     shared: dict[str, Any] = {}
 
     def get(path: str, api: str) -> dict[str, Any]:
-        return dict(arm("GET", path, api).json())
+        response = arm("GET", path, api, ok=(200, 404))
+        if response.status_code == 404:
+            shared.setdefault("missing", []).append(path)
+            raise WorkshopError(f"resource not found: {path}", owner="facilitator")
+        return dict(response.json())
 
     def foundry() -> tuple[str, str]:
         a = get(env.foundry_account_id, "2025-06-01")
@@ -357,7 +367,7 @@ def _models(report: Report, env: Environment) -> None:
             report.add(f"models.{role}", "models", f"{role} deployment '{name}'", BLOCKED,
                        f"not found; deployments: {', '.join(by_name) or 'none'}",
                        "facilitator: `contoso infra deploy --plan` (models are deployed ahead of the workshop)",
-                       owner="facilitator")
+                       owner="facilitator", data={"missing": True})
             continue
         model = d["properties"]["model"]
         sku = d.get("sku", {})
@@ -415,33 +425,156 @@ def _policy(report: Report, env: Environment, rg: str, shared: dict[str, Any]) -
     _probe(report, "policy.deny", "policy", "Deny assignments", deny, owner="admin", required=False)
 
 
-def _control_plane(report: Report, env: Environment, rg: str) -> None:
+def _participant_resources(report: Report, env: Environment, participant: str) -> None:
+    from ..data.blob import ParticipantContainer
+    from ..naming import ParticipantNames
+    from ..search.client import SearchClient
+
+    names = ParticipantNames(participant)
+    container = ParticipantContainer(env.resolved_blob_endpoint(), names.container, credential())
+    search = SearchClient(env)
+    probes: list[tuple[str, str, Callable[[], bool]]] = [
+        ("container", f"Blob container {names.container}", container.exists),
+    ]
+    for kind, name in (
+        ("indexes", names.raw_index), ("indexes", names.smart_index),
+        ("indexers", names.raw_indexer), ("indexers", names.smart_indexer),
+        ("skillsets", names.raw_skillset), ("skillsets", names.smart_skillset),
+        ("datasources", names.datasource),
+    ):
+        def exists_search(kind: str = kind, name: str = name) -> bool:
+            return search.get(kind, name) is not None
+        probes.append((name, f"Search {kind}/{name}", exists_search))
+    for key, title, exists in probes:
+        def fn(exists: Callable[[], bool] = exists) -> tuple[str, str]:
+            return (PASS, "exists") if exists() else (BLOCKED, "not found")
+        check = _probe(report, f"resources.{key}", "resources", title, fn,
+                       fix="resolve access with the facilitator/admin, then rerun preflight", owner="facilitator")
+        check.data["missing"] = check.evidence == "not found"
+
+
+def _creation_checks(report: Report, env: Environment, rg: str, shared: dict[str, Any],
+                     read: Callable[[str], list[dict[str, Any]] | None], participant: str | None) -> None:
+    from ..naming import ParticipantNames
+
+    missing_paths = shared.get("missing", [])
+    foundry_scope = rg if env.foundry_account_id in missing_paths else env.foundry_account_id
+    project_id = f"{env.foundry_account_id}/projects/{env.project_name}"
+    project_scope = foundry_scope if project_id in missing_paths else project_id
+    storage_scope = rg if env.resolved_storage_account_id() in missing_paths else env.resolved_storage_account_id()
+    search_scope = rg if env.search_service_id in missing_paths else env.search_service_id
+    specs = [
+        ("storage", "resources.storage", rg, "Microsoft.Storage/storageAccounts/write",
+         env.resolved_storage_account_id()),
+        ("search", "resources.search", rg, "Microsoft.Search/searchServices/write", env.search_service_id),
+        ("foundry", "resources.foundry", rg, "Microsoft.CognitiveServices/accounts/write", env.foundry_account_id),
+        ("project", "resources.project", foundry_scope,
+         "Microsoft.CognitiveServices/accounts/projects/write", project_id),
+        ("connection", "resources.connection", project_scope,
+         "Microsoft.CognitiveServices/accounts/projects/connections/write",
+         f"{project_id}/connections/{env.search_connection_name}"),
+    ]
+    for role in ("chat", "embedding", "decision"):
+        specs.append((f"model-{role}", f"models.{role}", foundry_scope,
+                      "Microsoft.CognitiveServices/accounts/deployments/write", ""))
+    if participant:
+        names = ParticipantNames(participant)
+        specs.append(("container", "resources.container", storage_scope,
+                      "Microsoft.Storage/storageAccounts/blobServices/containers/write", ""))
+        for kind, name in (
+            ("indexes", names.raw_index), ("indexes", names.smart_index),
+            ("indexers", names.raw_indexer), ("indexers", names.smart_indexer),
+            ("skillsets", names.raw_skillset), ("skillsets", names.smart_skillset),
+            ("datasources", names.datasource),
+        ):
+            specs.append((name, f"resources.{name}", search_scope,
+                          f"Microsoft.Search/searchServices/{kind}/write", ""))
+    by_id = {c.id: c for c in report.checks}
+    for key, resource_id, scope, action, path in specs:
+        resource = by_id.get(resource_id)
+        missing = path in missing_paths if path else bool(resource and resource.data.get("missing"))
+        perms = read(scope)
+        allowed = effective(perms, action) if perms is not None else None
+        owner = "participant" if allowed else "facilitator"
+        plan = (f"uv run contoso provision --participant {participant} --no-smoke --plan"
+                if participant and (key == "container" or key.startswith(f"{participant}-"))
+                else "uv run contoso infra deploy --parameters <file>.bicepparam --plan")
+        if allowed:
+            fix = (f"missing, self-provisionable subject to approval: review `{plan}`; obtain explicit approval "
+                   "before applying. Full-template permissions, service identities, policy and quota must also pass")
+        elif allowed is False:
+            fix = (f"ask the facilitator/admin to provision this resource for you before the workshop; "
+                   f"{action} is not granted at {scope}")
+        else:
+            fix = ("creation permissions unknown: ask the facilitator/admin to verify access or provision "
+                   "this resource for you; do not assume self-provisioning is possible")
+        if missing and resource:
+            resource.fix, resource.owner = fix, owner
+        status = (PASS if allowed else BLOCKED) if missing else (
+            WARNING if allowed is None else PASS if allowed else INFO)
+        report.add(f"rbac.provision-{key}", "control-plane",
+                   f"Can create {resource.title if resource else key} (RBAC indicator)", status,
+                   f"{action} at {scope}: "
+                   + ("unknown" if allowed is None else "allowed" if allowed else "not granted")
+                   + ("; resource is missing" if missing else "; creation only needed if missing")
+                   + "; RBAC indicator only; conditions, policy and quota still apply",
+                   fix if missing or allowed is None else "", owner=owner, required=missing)
+
+
+def _control_plane(report: Report, env: Environment, rg: str, shared: dict[str, Any], *,
+                   participant: str | None = None) -> None:
+    from ..naming import ParticipantNames
+
     cat = "control-plane"
-    try:
-        rg_perms = permissions(rg)
-        st_perms = permissions(env.resolved_storage_account_id())
-        fa_perms = permissions(env.foundry_account_id)
-    except WorkshopError as exc:
-        report.add("rbac.permissions", cat, "Effective permissions (indicator)", WARNING, str(exc)[:300],
-                   required=False)
-        return
+    cache: dict[str, list[dict[str, Any]] | None] = {}
+
+    def read(scope: str) -> list[dict[str, Any]] | None:
+        if scope not in cache:
+            try:
+                cache[scope] = permissions(scope)
+            except WorkshopError as exc:
+                cache[scope] = None
+                report.add(f"rbac.permissions-{len(cache)}", cat, "Effective permissions query", WARNING,
+                           f"{scope}: {str(exc)[:300]}",
+                           "ask the facilitator/admin to verify permissions; resolve missing/inaccessible resources",
+                           owner="facilitator", required=False)
+        return cache[scope]
+
+    _creation_checks(report, env, rg, shared, read, participant)
+    rg_perms = read(rg)
     facilitator_actions = {
         "Microsoft.Resources/deployments/write": "deploy Bicep",
+        "Microsoft.CognitiveServices/accounts/write": "create/update Foundry",
         "Microsoft.CognitiveServices/accounts/deployments/write": "create model deployments",
         "Microsoft.Search/searchServices/write": "create/update Search",
         "Microsoft.Storage/storageAccounts/write": "create/update Storage",
     }
-    have = [d for a, d in facilitator_actions.items() if effective(rg_perms, a)]
+    have = [d for a, d in facilitator_actions.items() if rg_perms is not None and effective(rg_perms, a)]
     report.add("rbac.facilitator", cat, "Can provision shared infrastructure (facilitator)",
-               PASS if len(have) == len(facilitator_actions) else INFO,
-               f"allowed: {', '.join(have) or 'none'} (participants do not need these)", required=False,
+               WARNING if rg_perms is None else PASS if len(have) == len(facilitator_actions) else INFO,
+               f"allowed: {', '.join(have) or ('unknown' if rg_perms is None else 'none')} "
+               "(participants do not need these when shared infrastructure exists)",
+               "ask the facilitator/admin to verify infrastructure deployment permissions" if rg_perms is None else "",
+               required=False,
                owner="facilitator")
-    grant_st = effective(st_perms, "Microsoft.Authorization/roleAssignments/write")
-    grant_fa = effective(fa_perms, "Microsoft.Authorization/roleAssignments/write")
-    conditional = any(p.get("condition") for p in st_perms + fa_perms)
+    storage_scope = env.resolved_storage_account_id()
+    if participant:
+        container_scope = f"{storage_scope}/blobServices/default/containers/{ParticipantNames(participant).container}"
+        container = next((c for c in report.checks if c.id == "resources.container"), None)
+        if not (container and container.data.get("missing")):
+            storage_scope = container_scope
+    if env.resolved_storage_account_id() in shared.get("missing", []):
+        storage_scope = rg
+    st_perms = read(storage_scope)
+    foundry_scope = rg if env.foundry_account_id in shared.get("missing", []) else env.foundry_account_id
+    fa_perms = read(foundry_scope)
+    grant_st = effective(st_perms, "Microsoft.Authorization/roleAssignments/write") if st_perms is not None else None
+    grant_fa = effective(fa_perms, "Microsoft.Authorization/roleAssignments/write") if fa_perms is not None else None
+    conditional = any(p.get("condition") for p in (st_perms or []) + (fa_perms or []))
     report.add("rbac.grant-agent", cat, "Can grant the hosted agent identity its roles",
                PASS if grant_st and grant_fa else BLOCKED,
-               f"roleAssignments/write on storage={grant_st}, Foundry account={grant_fa}"
+               f"roleAssignments/write at {storage_scope}={grant_st}, {foundry_scope}={grant_fa} "
+               "(None=unknown)"
                + ("; ABAC-conditioned (limited to Storage Blob Data Contributor / Foundry User for service "
                   "principals)" if conditional else "")
                + "; Contributor alone cannot assign roles",
@@ -449,18 +582,30 @@ def _control_plane(report: Report, env: Environment, rg: str) -> None:
                "parameters (constrained RBAC Administrator) or have an Owner run `contoso miner deploy`",
                owner="facilitator")
     checks = (
-        ("rbac.blob", "blob read/write/metadata", st_perms,
+        ("rbac.blob-read", "blob read", st_perms,
+         "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read", True),
+        ("rbac.blob", "blob write/metadata (Storage Blob Data Contributor)", st_perms,
          "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write", True),
         ("rbac.agents", "create/invoke Foundry agents", fa_perms,
          "Microsoft.CognitiveServices/accounts/AIServices/agents/write", True),
         ("rbac.decision", "call the decision API", fa_perms,
          "Microsoft.CognitiveServices/accounts/AIServices/providers/action", True),
+        ("rbac.search-read", "Search document read",
+         read(rg if env.search_service_id in shared.get("missing", []) else env.search_service_id),
+         "Microsoft.Search/searchServices/indexes/documents/read", True),
+        ("rbac.search-documents", "Search document write (Search Index Data Contributor)",
+         read(rg if env.search_service_id in shared.get("missing", []) else env.search_service_id),
+         "Microsoft.Search/searchServices/indexes/documents/write", True),
     )
     for cid, what, perms, action, data in checks:
-        ok = effective(perms, action, data=data)
+        ok = perms is not None and effective(perms, action, data=data)
         report.add(cid, cat, f"Data-plane permission: {what} (indicator)", PASS if ok else BLOCKED,
-                   f"{action}: {'allowed' if ok else 'not in your effective permissions'}",
-                   "" if ok else "facilitator: add your object id to `participants` in the Bicep parameters",
+                   f"{action}: {'unknown' if perms is None else 'allowed' if ok else 'not granted'}"
+                   + (f" at {storage_scope}" if cid.startswith("rbac.blob") else ""),
+                   "" if ok else "ask the facilitator/admin to grant the required data role at the narrowest "
+                   "supported scope (Storage Blob Data Contributor on your container; Search Index Data "
+                   "Contributor on Search; Foundry User on Foundry), or provision/run it for you; "
+                   "resource creation permissions do not grant data access",
                    owner="facilitator")
 
 
