@@ -1,0 +1,2193 @@
+{
+  "name": "contoso-oil-rag-ladder",
+  "version": "v2.1",
+  "corpus_version": "2026.1",
+  "description": "Corpus-grounded evaluation of the RAG ladder over the 25-document Contoso Oil corpus: plain RAG, a fixed contract-filtered RAG, an unfiltered smart-index control, a classifier-routed type filter and an oracle type filter. Queries are stratified into contract questions with competing wrong-type documents (contract_distractor), contract questions without meaningful competition (contract_clean), questions whose authoritative answer lives in another document type (other_type) and questions the corpus cannot answer or that carry a false premise (unanswerable). Each query lists verbatim evidence, required facts with paraphrase alternatives and, where relevant, distractor documents and facts that a correct answer never needs to state. References, target types and labels are evaluation-only and are never agent, router or index input. The dev split may be inspected while iterating; the test split is the headline result. v2.1 (2026-11-18, before any test-split answers were generated): required/distractor facts reduced to necessary, short canonical cores after a dev-split pipeline check showed paraphrase misses.",
+  "hypotheses": [
+    "H1: On contract_distractor, the contract-filtered and routed variants cite fewer wrong-type documents, mention fewer distractor facts and recover at least as many required facts as plain RAG.",
+    "H2: On other_type, the fixed contract filter loses required facts relative to plain RAG, while the routed variant does not.",
+    "H3: The unfiltered smart-index control matches plain RAG on every stratum; re-indexing alone yields no gain.",
+    "H4: The oracle type filter bounds the routed variant from above; the gap between them measures router error."
+  ],
+  "strata": {
+    "contract_distractor": "Authoritative answer is in one or more signed contracts, and at least one non-contract document (policy, training or planning deck, invoice, letter, email, memo, draft heads of terms or a document with embedded instructions) contains similar wording with different values or non-binding statements.",
+    "contract_clean": "Authoritative answer is in a contract and no other document type offers meaningfully competing text; metadata filtering should neither help nor hurt.",
+    "other_type": "Authoritative answer is in an invoice, policy, technical report, correspondence or presentation; contracts or other types may be lexically similar distractors. A fixed contract filter removes the answer.",
+    "unanswerable": "The corpus does not contain the requested value or the question carries a false premise. A good answer checks the listed documents, says what is absent or corrects the premise, and does not import values from neighbouring documents."
+  },
+  "queries": [
+    {
+      "id": "L001",
+      "v1_id": "rag01",
+      "split": "test",
+      "stratum": "contract_distractor",
+      "target_type": "contract",
+      "query": "What payment terms apply under our supplier contracts?",
+      "source_doc_ids": [
+        "doc-001",
+        "doc-004",
+        "doc-009",
+        "doc-013",
+        "doc-018",
+        "doc-021"
+      ],
+      "evidence": {
+        "doc-001": "within forty-five (45) days of receipt of invoice",
+        "doc-004": "payment is due thirty (30) days after the end of the month",
+        "doc-009": "sixty (60) days end of month",
+        "doc-013": "within thirty (30) days of receipt",
+        "doc-018": "within thirty (30) days of receipt",
+        "doc-021": "within thirty (30) days of the invoice date"
+      },
+      "required_facts": [
+        [
+          "45 days",
+          "45-day"
+        ],
+        [
+          "60 days end of month",
+          "60 days EOM",
+          "60 days from end of month",
+          "60 days from the end of the month",
+          "60 days after month end",
+          "60 days after the end of the month"
+        ],
+        [
+          "30 days of the invoice date",
+          "30 days from the invoice date",
+          "30 days from invoice date",
+          "30 days after the invoice date"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-003",
+        "doc-025"
+      ],
+      "distractor_facts": [
+        [
+          "net 15",
+          "net-15"
+        ],
+        [
+          "net 90",
+          "net-90"
+        ],
+        [
+          "7 days",
+          "7-day"
+        ]
+      ],
+      "ground_truth": "Northwind vessel charter: 45 days from receipt. Fabrikam rig maintenance: 30 days after the end of the month a valid invoice is received. Litware drilling consumables: 60 days end of month. Proseware pipeline inspection: 30 days from receipt of undisputed milestone invoices. Fourth Coffee catering: 30 days from receipt of a valid monthly invoice. Tailspin helicopter: 30 days from invoice date. These differ from training aspirations or procurement defaults.",
+      "expected_behavior": "Search and cite the supplier agreements. Distinguish each supplier's payment trigger. Do not present net 15 or net 90 from a training presentation, or the policy default, as signed terms."
+    },
+    {
+      "id": "L002",
+      "v1_id": "rag02",
+      "split": "dev",
+      "stratum": "contract_clean",
+      "target_type": "contract",
+      "query": "What late payment interest applies to the supply vessel charter?",
+      "source_doc_ids": [
+        "doc-001"
+      ],
+      "evidence": {
+        "doc-001": "Late payment interest of 1.5% per month"
+      },
+      "required_facts": [
+        [
+          "1.5% per month",
+          "1.5% a month",
+          "1.5% monthly",
+          "1.5 percent a month"
+        ]
+      ],
+      "distractor_doc_ids": [],
+      "distractor_facts": [],
+      "ground_truth": "The Northwind vessel charter charges 1.5% per month on undisputed amounts unpaid after the due date.",
+      "expected_behavior": "Search and cite the vessel charter; state 1.5% per month, the undisputed-amount qualification and the overdue trigger."
+    },
+    {
+      "id": "L003",
+      "v1_id": "rag03",
+      "split": "test",
+      "stratum": "contract_distractor",
+      "target_type": "contract",
+      "query": "Which supplier agreements offer a discount for early payment, and how do we qualify?",
+      "source_doc_ids": [
+        "doc-009"
+      ],
+      "evidence": {
+        "doc-009": "An early settlement discount of two percent (2%) applies where Buyer pays within ten (10) days of invoice"
+      },
+      "required_facts": [
+        [
+          "Litware"
+        ],
+        [
+          "2 percent",
+          "2% discount",
+          "two percent"
+        ],
+        [
+          "10 days of invoice",
+          "10 days of the invoice",
+          "10 days from invoice",
+          "10 days from the invoice",
+          "within 10 days"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-002",
+        "doc-022"
+      ],
+      "distractor_facts": [
+        [
+          "Treasury"
+        ],
+        [
+          "where cash allows"
+        ]
+      ],
+      "ground_truth": "Litware's Master Purchase Terms for Drilling Consumables offer a 2% early settlement discount if payment is made within 10 days of invoice.",
+      "expected_behavior": "Search and cite the binding Litware purchase terms even though they do not use the literal word contract. State both 2% and the 10-day invoice trigger; do not substitute a training example."
+    },
+    {
+      "id": "L004",
+      "v1_id": "rag04",
+      "split": "dev",
+      "stratum": "contract_distractor",
+      "target_type": "contract",
+      "query": "How much retention is withheld from rig maintenance payments and when is it released?",
+      "source_doc_ids": [
+        "doc-004"
+      ],
+      "evidence": {
+        "doc-004": "retention of five percent (5%) of each payment, released upon acceptance of the annual maintenance audit"
+      },
+      "required_facts": [
+        [
+          "5 percent",
+          "five percent"
+        ],
+        [
+          "annual maintenance audit",
+          "annual audit",
+          "maintenance audit"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-011"
+      ],
+      "distractor_facts": [
+        [
+          "11,062"
+        ]
+      ],
+      "ground_truth": "Fabrikam's rig maintenance agreement withholds 5% of each payment, released upon acceptance of the annual maintenance audit.",
+      "expected_behavior": "Search and cite the rig maintenance agreement, not just an invoice with a similar retention line. Give the percentage and release condition."
+    },
+    {
+      "id": "L005",
+      "v1_id": "rag05",
+      "split": "test",
+      "stratum": "contract_clean",
+      "target_type": "contract",
+      "query": "What notice and cure periods apply to ending the rig maintenance agreement?",
+      "source_doc_ids": [
+        "doc-004"
+      ],
+      "evidence": {
+        "doc-004": "terminate for convenience on sixty (60) days' written notice"
+      },
+      "required_facts": [
+        [
+          "60 days",
+          "60-day"
+        ],
+        [
+          "14 days",
+          "14-day"
+        ]
+      ],
+      "distractor_doc_ids": [],
+      "distractor_facts": [],
+      "ground_truth": "Contoso may terminate the rig maintenance agreement for convenience on 60 days' written notice. Either party may terminate immediately for a material breach that has not been remedied within 14 days.",
+      "expected_behavior": "Search and cite the rig agreement. Distinguish the 60-day convenience notice from the 14-day material-breach cure period."
+    },
+    {
+      "id": "L006",
+      "v1_id": "rag06",
+      "split": "dev",
+      "stratum": "contract_clean",
+      "target_type": "contract",
+      "query": "How are pipeline inspection framework fees split across milestones, and when are milestone invoices due?",
+      "source_doc_ids": [
+        "doc-013"
+      ],
+      "evidence": {
+        "doc-013": "forty percent (40%) on tool run completion"
+      },
+      "required_facts": [
+        [
+          "40 percent"
+        ],
+        [
+          "20 percent"
+        ],
+        [
+          "30 days",
+          "30-day"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-006"
+      ],
+      "distractor_facts": [],
+      "ground_truth": "Proseware's pipeline inspection framework pays 40% on tool run completion, 40% on delivery of the preliminary report and 20% on acceptance of the final report. Undisputed milestone invoices are due within 30 days of receipt.",
+      "expected_behavior": "Search and cite the framework agreement. Include all three milestones, their percentages and the invoice payment trigger without confusing inspection findings with contractual terms."
+    },
+    {
+      "id": "L007",
+      "v1_id": "rag07",
+      "split": "test",
+      "stratum": "contract_clean",
+      "target_type": "contract",
+      "query": "What is the supplier liability cap under the pipeline inspection framework?",
+      "source_doc_ids": [
+        "doc-013"
+      ],
+      "evidence": {
+        "doc-013": "capped at one hundred percent (100%) of the call-off order value"
+      },
+      "required_facts": [
+        [
+          "one hundred percent",
+          "100 percent"
+        ],
+        [
+          "call-off order value",
+          "call-off value",
+          "value of the call-off",
+          "value of each call-off",
+          "call-off order's value"
+        ]
+      ],
+      "distractor_doc_ids": [],
+      "distractor_facts": [],
+      "ground_truth": "The supplier's aggregate liability under each pipeline inspection call-off order is capped at 100% of that call-off order's value.",
+      "expected_behavior": "Search and cite the pipeline framework; distinguish the call-off order value from the value of the entire framework."
+    },
+    {
+      "id": "L008",
+      "v1_id": "rag08",
+      "split": "test",
+      "stratum": "contract_distractor",
+      "target_type": "contract",
+      "query": "Under the catering agreement, what compensation is owed for a coffee service failure?",
+      "source_doc_ids": [
+        "doc-018"
+      ],
+      "evidence": {
+        "doc-018": "service credit of GBP 2,500, deducted from the next invoice"
+      },
+      "required_facts": [
+        [
+          "GBP 2,500",
+          "2,500"
+        ],
+        [
+          "next invoice",
+          "following invoice",
+          "subsequent invoice"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-019",
+        "doc-014"
+      ],
+      "distractor_facts": [
+        [
+          "4,880"
+        ]
+      ],
+      "ground_truth": "Each service failure under the Fourth Coffee agreement entitles Contoso to a GBP 2,500 service credit deducted from the next invoice.",
+      "expected_behavior": "Search and cite the catering agreement. State the service credit per failure and how it is applied; distinguish a contractual entitlement from an invoice or incident memo."
+    },
+    {
+      "id": "L009",
+      "v1_id": "rag09",
+      "split": "dev",
+      "stratum": "contract_distractor",
+      "target_type": "contract",
+      "query": "How much coffee stock must Fourth Coffee maintain, and how long can a stock-out last before it is a service failure?",
+      "source_doc_ids": [
+        "doc-018"
+      ],
+      "evidence": {
+        "doc-018": "minimum of fourteen (14) days of coffee stock"
+      },
+      "required_facts": [
+        [
+          "14 days",
+          "14-day"
+        ],
+        [
+          "12 hours",
+          "12-hour"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-014",
+        "doc-019"
+      ],
+      "distractor_facts": [
+        [
+          "31-hour",
+          "31 hours",
+          "31 hour"
+        ]
+      ],
+      "ground_truth": "Fourth Coffee must maintain at least 14 days of coffee stock on each platform at all times. A stock-out exceeding 12 hours is a service failure.",
+      "expected_behavior": "Search and cite the catering agreement and include both thresholds. Do not substitute the duration of a particular incident for the contractual threshold."
+    },
+    {
+      "id": "L010",
+      "v1_id": "rag10",
+      "split": "test",
+      "stratum": "contract_clean",
+      "target_type": "contract",
+      "query": "What fixed and variable charges apply to the helicopter crew transfer service?",
+      "source_doc_ids": [
+        "doc-021"
+      ],
+      "evidence": {
+        "doc-021": "GBP 410,000 per month applies, plus GBP 3,150 per flight hour"
+      },
+      "required_facts": [
+        [
+          "GBP 410,000",
+          "410,000"
+        ],
+        [
+          "GBP 3,150",
+          "3,150"
+        ],
+        [
+          "Jet A-1",
+          "Jet A1"
+        ]
+      ],
+      "distractor_doc_ids": [],
+      "distractor_facts": [],
+      "ground_truth": "Tailspin charges GBP 410,000 per month plus GBP 3,150 per flight hour. A fuel surcharge is adjusted quarterly against the published Jet A-1 index.",
+      "expected_behavior": "Search and cite the helicopter agreement. Include monthly and hourly charges and the separately indexed fuel surcharge without inventing a surcharge amount."
+    },
+    {
+      "id": "L011",
+      "v1_id": "rag11",
+      "split": "test",
+      "stratum": "contract_clean",
+      "target_type": "contract",
+      "query": "How much notice does Contoso need to terminate the helicopter agreement for convenience?",
+      "source_doc_ids": [
+        "doc-021"
+      ],
+      "evidence": {
+        "doc-021": "one hundred and eighty (180) days' notice"
+      },
+      "required_facts": [
+        [
+          "one hundred and eighty (180) days",
+          "180 days",
+          "180-day"
+        ]
+      ],
+      "distractor_doc_ids": [],
+      "distractor_facts": [],
+      "ground_truth": "Contoso may terminate the Tailspin helicopter agreement for convenience on 180 days' notice.",
+      "expected_behavior": "Search and cite the helicopter agreement; do not reuse the shorter notice periods from other supplier agreements."
+    },
+    {
+      "id": "L012",
+      "v1_id": "rag12",
+      "split": "test",
+      "stratum": "contract_clean",
+      "target_type": "contract",
+      "query": "Compare the invoice payment deadlines in the vessel charter and the helicopter agreement. Do they start from the same date?",
+      "source_doc_ids": [
+        "doc-001",
+        "doc-021"
+      ],
+      "evidence": {
+        "doc-001": "forty-five (45) days of receipt of invoice",
+        "doc-021": "thirty (30) days of the invoice date"
+      },
+      "required_facts": [
+        [
+          "45 days of receipt",
+          "45 days from receipt",
+          "45 days after receipt"
+        ],
+        [
+          "30 days of the invoice date",
+          "30 days from the invoice date",
+          "30 days from invoice date",
+          "30 days after the invoice date"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-005"
+      ],
+      "distractor_facts": [],
+      "ground_truth": "No. The Northwind vessel charter allows 45 days from receipt of invoice; the Tailspin helicopter agreement allows 30 days from invoice date. Both the duration and the triggering date differ.",
+      "expected_behavior": "Search and cite both agreements. Explicitly distinguish receipt date from invoice date rather than only listing the durations."
+    },
+    {
+      "id": "L013",
+      "v1_id": "rag13",
+      "split": "test",
+      "stratum": "contract_distractor",
+      "target_type": "contract",
+      "query": "Do our actual vessel and drilling-consumables agreements use net 15 or net 90 payment terms?",
+      "source_doc_ids": [
+        "doc-001",
+        "doc-009"
+      ],
+      "evidence": {
+        "doc-001": "forty-five (45) days of receipt of invoice",
+        "doc-009": "sixty (60) days end of month"
+      },
+      "required_facts": [
+        [
+          "45 days",
+          "45-day"
+        ],
+        [
+          "60 days end of month",
+          "60 days EOM",
+          "60 days from end of month",
+          "60 days from the end of the month",
+          "60 days after month end",
+          "60 days after the end of the month"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-003",
+        "doc-025"
+      ],
+      "distractor_facts": [
+        [
+          "41 days",
+          "41-day"
+        ],
+        [
+          "7 days",
+          "7-day"
+        ]
+      ],
+      "ground_truth": "Neither of these agreements uses net 15 or net 90. The vessel charter specifies 45 days from receipt of invoice, and the drilling-consumables terms specify 60 days end of month. Training examples or aspirations do not override these terms.",
+      "expected_behavior": "Search and cite both binding agreements. Reject the false net-15/net-90 premise using their actual terms; do not treat a training deck as contractual authority."
+    },
+    {
+      "id": "L014",
+      "v1_id": "rag14",
+      "split": "test",
+      "stratum": "contract_clean",
+      "target_type": "contract",
+      "query": "What delivery commitment and warranty do Litware's drilling-consumables terms provide?",
+      "source_doc_ids": [
+        "doc-009"
+      ],
+      "evidence": {
+        "doc-009": "deliver DAP Aberdeen supply base within ten (10) working days"
+      },
+      "required_facts": [
+        [
+          "10 working days",
+          "10 business days"
+        ],
+        [
+          "API specifications",
+          "API specs",
+          "API standards",
+          "API spec"
+        ],
+        [
+          "12 months",
+          "12-month"
+        ]
+      ],
+      "distractor_doc_ids": [],
+      "distractor_facts": [],
+      "ground_truth": "Litware must deliver DAP Aberdeen supply base within 10 working days. The goods must conform to API specifications and be free of defects for 12 months from delivery.",
+      "expected_behavior": "Search and cite the Master Purchase Terms. State working days, the delivery location, API conformity and the 12-month warranty trigger."
+    },
+    {
+      "id": "L015",
+      "v1_id": "rag15",
+      "split": "dev",
+      "stratum": "other_type",
+      "target_type": "technical_report",
+      "query": "What did the in-line inspection of export pipeline segment 14 find?",
+      "source_doc_ids": [
+        "doc-006"
+      ],
+      "evidence": {
+        "doc-006": "37 external metal-loss features"
+      },
+      "required_facts": [
+        [
+          "37 external metal-loss features",
+          "37 metal-loss features",
+          "37 external",
+          "37 features",
+          "37 metal loss",
+          "37 anomalies"
+        ],
+        [
+          "41% wall loss",
+          "41 percent"
+        ],
+        [
+          "60% wall loss",
+          "60 percent"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-013"
+      ],
+      "distractor_facts": [
+        [
+          "tool run completion"
+        ]
+      ],
+      "ground_truth": "The inspection found 37 external metal-loss features. The deepest was 41% wall loss at KP 127.4; none exceeded the 60% wall-loss repair criterion.",
+      "expected_behavior": "Search and cite the actual inspection report, not the inspection services agreement. If the available search scope excludes the report, admit that the findings cannot be established rather than inventing them."
+    },
+    {
+      "id": "L016",
+      "v1_id": "rag16",
+      "split": "test",
+      "stratum": "other_type",
+      "target_type": "invoice",
+      "query": "How much were we invoiced for the emergency coffee airlift in March?",
+      "source_doc_ids": [
+        "doc-019"
+      ],
+      "evidence": {
+        "doc-019": "emergency airlift, 6 March): GBP 4,880.00"
+      },
+      "required_facts": [
+        [
+          "GBP 4,880",
+          "4,880"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-014",
+        "doc-018"
+      ],
+      "distractor_facts": [],
+      "ground_truth": "Invoice FC-2026-031 charges GBP 4,880.00 for the emergency coffee-bean airlift on 6 March.",
+      "expected_behavior": "Search and cite invoice FC-2026-031. Distinguish the airlift charge from the GBP 2,500 stock-out credit; if the invoice is inaccessible, admit the limitation."
+    },
+    {
+      "id": "L017",
+      "v1_id": "rag17",
+      "split": "dev",
+      "stratum": "other_type",
+      "target_type": "policy",
+      "query": "What is our default payment term policy for new suppliers, and when is CFO approval required?",
+      "source_doc_ids": [
+        "doc-002"
+      ],
+      "evidence": {
+        "doc-002": "Payment terms longer than sixty (60) days require CFO approval"
+      },
+      "required_facts": [
+        [
+          "30 days from receipt of a valid invoice",
+          "30 days of receipt",
+          "30 days from receipt",
+          "30 days after receipt"
+        ],
+        [
+          "CFO approval",
+          "CFO sign-off",
+          "approval from the CFO",
+          "approval of the CFO",
+          "approved by the CFO"
+        ],
+        [
+          "longer than 60 days",
+          "more than 60 days",
+          "over 60 days",
+          "exceeding 60 days",
+          "beyond 60 days",
+          "above 60 days"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-003",
+        "doc-001"
+      ],
+      "distractor_facts": [
+        [
+          "net 15",
+          "net-15"
+        ],
+        [
+          "45 days",
+          "45-day"
+        ]
+      ],
+      "ground_truth": "Policy PP-07 defaults new suppliers to 30 days from receipt of a valid invoice. Payment terms longer than 60 days require CFO approval. Small and medium suppliers must be offered no more than 30 days.",
+      "expected_behavior": "Search and cite procurement policy PP-07, not a supplier agreement as evidence of corporate policy. State the default, approval threshold and SME restriction, or disclose that policy is outside the accessible scope."
+    },
+    {
+      "id": "L018",
+      "v1_id": "rag18",
+      "split": "test",
+      "stratum": "other_type",
+      "target_type": "technical_report",
+      "query": "What caused the Contoso-12 top-drive failure and what corrective actions were recommended?",
+      "source_doc_ids": [
+        "doc-023"
+      ],
+      "evidence": {
+        "doc-023": "Root cause: lubrication contamination following a filter bypass"
+      },
+      "required_facts": [
+        [
+          "lubrication contamination",
+          "contaminated lubrication",
+          "lube oil contamination",
+          "lubricant contamination",
+          "contamination of the lubrication",
+          "contaminated lube"
+        ],
+        [
+          "differential pressure alarm",
+          "differential-pressure alarm",
+          "DP alarm"
+        ],
+        [
+          "oil analysis"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-004",
+        "doc-007",
+        "doc-011"
+      ],
+      "distractor_facts": [
+        [
+          "11 hours"
+        ],
+        [
+          "9,240"
+        ]
+      ],
+      "ground_truth": "The maintenance report attributes the failure to lubrication contamination following a filter bypass. It recommends a differential-pressure alarm on the lube filter and monthly oil analysis.",
+      "expected_behavior": "Search and cite the actual top-drive replacement report, not the maintenance agreement or campaign presentation. Include both corrective actions or admit the search-scope limitation."
+    },
+    {
+      "id": "L019",
+      "v1_id": "rag19",
+      "split": "dev",
+      "stratum": "unanswerable",
+      "target_type": "contract",
+      "query": "What numerical liability cap does the helicopter crew transfer agreement specify?",
+      "source_doc_ids": [
+        "doc-021"
+      ],
+      "evidence": {
+        "doc-021": "This Crew Transfer Services Agreement"
+      },
+      "required_facts": [],
+      "distractor_doc_ids": [
+        "doc-013",
+        "doc-001"
+      ],
+      "distractor_facts": [
+        [
+          "one hundred percent",
+          "100 percent"
+        ],
+        [
+          "knock-for-knock",
+          "knock for knock"
+        ]
+      ],
+      "ground_truth": "The provided helicopter crew transfer agreement does not specify a numerical liability cap. The assistant should say the value cannot be established from the available document, rather than importing another agreement's cap.",
+      "expected_behavior": "Search the helicopter agreement and explicitly state that no numerical liability cap is provided. Do not reuse the pipeline framework's 100% cap or infer a cap from the monthly charge."
+    },
+    {
+      "id": "L020",
+      "v1_id": "rag20",
+      "split": "test",
+      "stratum": "unanswerable",
+      "target_type": "contract",
+      "query": "What fixed daily penalty does the rig maintenance agreement impose for missing its four-hour response target?",
+      "source_doc_ids": [
+        "doc-004"
+      ],
+      "evidence": {
+        "doc-004": "respond to critical breakdowns within four (4) hours"
+      },
+      "required_facts": [],
+      "distractor_doc_ids": [
+        "doc-018"
+      ],
+      "distractor_facts": [
+        [
+          "GBP 2,500",
+          "2,500"
+        ]
+      ],
+      "ground_truth": "The provided rig maintenance agreement specifies a four-hour critical-breakdown response target but no fixed daily penalty for missing it. The penalty amount cannot be established from this document.",
+      "expected_behavior": "Search and cite the rig agreement for the response target, then disclose that the requested penalty is not stated. Do not invent a daily rate or borrow a service credit from the catering agreement."
+    },
+    {
+      "id": "L021",
+      "split": "dev",
+      "stratum": "contract_distractor",
+      "target_type": "contract",
+      "query": "What day rate are we paying for the Northwind Petrel, and how is the hire billed?",
+      "source_doc_ids": [
+        "doc-001"
+      ],
+      "evidence": {
+        "doc-001": "The day rate is EUR 18,450 per day, payable monthly in arrears."
+      },
+      "required_facts": [
+        [
+          "EUR 18,450",
+          "18,450"
+        ],
+        [
+          "monthly in arrears",
+          "in arrears"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-024",
+        "doc-008",
+        "doc-022"
+      ],
+      "distractor_facts": [
+        [
+          "42-45k",
+          "EUR 42-45k"
+        ]
+      ],
+      "ground_truth": "The Northwind Petrel charter day rate is EUR 18,450 per day, payable monthly in arrears. Fuel, lubricants and port dues are recharged to Contoso at cost without mark-up.",
+      "expected_behavior": "Cite the signed time charter. Do not quote the draft subsea vessel rate range or treat the request for a lower rate as an agreed change."
+    },
+    {
+      "id": "L022",
+      "split": "test",
+      "stratum": "contract_distractor",
+      "target_type": "contract",
+      "query": "Can we extend the Northwind Petrel charter, and by how much?",
+      "source_doc_ids": [
+        "doc-001"
+      ],
+      "evidence": {
+        "doc-001": "with two optional extension periods of six (6) months each"
+      },
+      "required_facts": [
+        [
+          "two optional extension",
+          "two extension periods",
+          "two optional extensions",
+          "two options",
+          "two six-month",
+          "two further"
+        ],
+        [
+          "6 months each",
+          "six-month",
+          "6 months"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-008",
+        "doc-024"
+      ],
+      "distractor_facts": [
+        [
+          "6 months firm"
+        ]
+      ],
+      "ground_truth": "Yes. The 24-month charter from 1 March 2026 includes two optional extension periods of six months each.",
+      "expected_behavior": "Cite the charter clause 1.1. Report both options and their length; do not use the unsigned subsea vessel heads of terms or the extension notice as the source of the entitlement."
+    },
+    {
+      "id": "L023",
+      "split": "test",
+      "stratum": "contract_distractor",
+      "target_type": "contract",
+      "query": "How long do we have to pay Litware for drill bits and other drilling consumables?",
+      "source_doc_ids": [
+        "doc-009"
+      ],
+      "evidence": {
+        "doc-009": "Buyer shall settle each correct invoice sixty (60) days end of month."
+      },
+      "required_facts": [
+        [
+          "60 days end of month",
+          "60 days EOM",
+          "60 days from end of month",
+          "60 days from the end of the month",
+          "60 days after month end",
+          "60 days after the end of the month"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-003",
+        "doc-002"
+      ],
+      "distractor_facts": [
+        [
+          "net 90",
+          "net-90"
+        ],
+        [
+          "net 15",
+          "net-15"
+        ],
+        [
+          "30 days from receipt of a valid invoice",
+          "30 days from receipt"
+        ]
+      ],
+      "ground_truth": "Under the Litware Master Purchase Terms, Contoso settles each correct invoice 60 days end of month; a 2% discount applies if paid within 10 days of invoice.",
+      "expected_behavior": "Cite the binding Litware terms even though they never say 'contract'. Do not substitute training-deck examples or the procurement default."
+    },
+    {
+      "id": "L024",
+      "split": "dev",
+      "stratum": "contract_distractor",
+      "target_type": "contract",
+      "query": "What payment terms do we owe Fourth Coffee for catering?",
+      "source_doc_ids": [
+        "doc-018"
+      ],
+      "evidence": {
+        "doc-018": "Contoso shall pay each valid monthly invoice within thirty (30) days of receipt."
+      },
+      "required_facts": [
+        [
+          "30 days of receipt",
+          "30 days from receipt",
+          "30 days after receipt",
+          "within 30 days"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-003",
+        "doc-025"
+      ],
+      "distractor_facts": [
+        [
+          "net 15",
+          "net-15",
+          "15 days"
+        ],
+        [
+          "7 days",
+          "7-day"
+        ]
+      ],
+      "ground_truth": "Contoso must pay each valid monthly Fourth Coffee invoice within 30 days of receipt.",
+      "expected_behavior": "Cite the catering agreement. Do not present the 'small supplier' example from training material or an instruction embedded in an unrelated document as the agreed term."
+    },
+    {
+      "id": "L025",
+      "split": "test",
+      "stratum": "contract_distractor",
+      "target_type": "contract",
+      "query": "When does the Northwind Petrel stop earning hire if it breaks down?",
+      "source_doc_ids": [
+        "doc-001"
+      ],
+      "evidence": {
+        "doc-001": "No hire is payable for any period exceeding six (6) consecutive hours during which the vessel is unable to perform due to breakdown or crew deficiency."
+      },
+      "required_facts": [
+        [
+          "6 consecutive hours",
+          "6 hours",
+          "6-hour"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-005"
+      ],
+      "distractor_facts": [
+        [
+          "9 hours"
+        ],
+        [
+          "6,918.75"
+        ]
+      ],
+      "ground_truth": "No hire is payable for any period exceeding six consecutive hours in which the vessel cannot perform because of breakdown or crew deficiency.",
+      "expected_behavior": "Cite the off-hire clause. State the six-consecutive-hour threshold and both causes; do not answer with a specific off-hire event or deduction from a bill."
+    },
+    {
+      "id": "L026",
+      "split": "test",
+      "stratum": "contract_distractor",
+      "target_type": "contract",
+      "query": "What does Fabrikam charge us each month for rig maintenance, and what can be added on top?",
+      "source_doc_ids": [
+        "doc-004"
+      ],
+      "evidence": {
+        "doc-004": "Company shall pay the monthly service fee of GBP 212,000 plus approved call-out charges at the rates in Appendix B."
+      },
+      "required_facts": [
+        [
+          "GBP 212,000",
+          "212,000"
+        ],
+        [
+          "call-out charges",
+          "call-out",
+          "callout",
+          "call out"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-011"
+      ],
+      "distractor_facts": [
+        [
+          "210,178"
+        ],
+        [
+          "9,240"
+        ]
+      ],
+      "ground_truth": "Fabrikam's monthly service fee is GBP 212,000, plus approved call-out charges at the Appendix B rates; Contoso withholds a 5% retention from each payment.",
+      "expected_behavior": "Cite the rig maintenance agreement. Do not report one month's billed total or a single call-out amount as the contractual charge."
+    },
+    {
+      "id": "L027",
+      "split": "dev",
+      "stratum": "contract_distractor",
+      "target_type": "contract",
+      "query": "What rate per person do we pay Fourth Coffee for offshore catering?",
+      "source_doc_ids": [
+        "doc-018"
+      ],
+      "evidence": {
+        "doc-018": "Charges are GBP 38.50 per person on board per day."
+      },
+      "required_facts": [
+        [
+          "GBP 38.50",
+          "38.50"
+        ],
+        [
+          "per person on board per day",
+          "per person per day",
+          "per person on board",
+          "per head per day",
+          "per POB per day",
+          "person on board",
+          "per person, per day"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-019"
+      ],
+      "distractor_facts": [
+        [
+          "229,145"
+        ],
+        [
+          "107,415"
+        ],
+        [
+          "4,880"
+        ]
+      ],
+      "ground_truth": "Fourth Coffee charges GBP 38.50 per person on board per day.",
+      "expected_behavior": "Cite the catering agreement's charging clause. Do not answer with a monthly bill total, a platform subtotal or a one-off airlift charge."
+    },
+    {
+      "id": "L028",
+      "split": "test",
+      "stratum": "contract_distractor",
+      "target_type": "contract",
+      "query": "What work does Proseware do for us, and how do we order it?",
+      "source_doc_ids": [
+        "doc-013"
+      ],
+      "evidence": {
+        "doc-013": "for in-line inspection (ILI), external corrosion direct assessment and reporting on the Contoso export pipeline system"
+      },
+      "required_facts": [
+        [
+          "in-line inspection",
+          "inline inspection",
+          "in line inspection"
+        ],
+        [
+          "external corrosion direct assessment",
+          "ECDA"
+        ],
+        [
+          "call-off orders",
+          "call-off order",
+          "call-off",
+          "call off"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-006",
+        "doc-012"
+      ],
+      "distractor_facts": [
+        [
+          "magnetic flux leakage"
+        ],
+        [
+          "close visual inspection",
+          "ROV-based"
+        ]
+      ],
+      "ground_truth": "Proseware provides in-line inspection, external corrosion direct assessment and reporting on the Contoso export pipeline system. Work is requested through call-off orders that reference the framework and state the pipeline segment, tool type and schedule.",
+      "expected_behavior": "Cite the framework agreement's scope and call-off mechanism. Do not describe findings or inspection methods from individual inspection or survey results as the agreed scope."
+    },
+    {
+      "id": "L029",
+      "split": "dev",
+      "stratum": "contract_distractor",
+      "target_type": "contract",
+      "query": "How quickly must Fabrikam respond to and fix a critical rig breakdown?",
+      "source_doc_ids": [
+        "doc-004"
+      ],
+      "evidence": {
+        "doc-004": "Contractor shall respond to critical breakdowns within four (4) hours and restore operation within twenty-four (24) hours where spare parts are available on site."
+      },
+      "required_facts": [
+        [
+          "4 hours",
+          "4-hour"
+        ],
+        [
+          "24 hours",
+          "24-hour"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-011",
+        "doc-020",
+        "doc-023"
+      ],
+      "distractor_facts": [
+        [
+          "11 hours"
+        ],
+        [
+          "9 hours"
+        ],
+        [
+          "14-17 March"
+        ]
+      ],
+      "ground_truth": "Fabrikam must respond to critical breakdowns within four hours and restore operation within twenty-four hours where spare parts are available on site.",
+      "expected_behavior": "Cite the service-level clause. Give both targets and the spare-parts condition; do not cite durations of a specific call-out, a disputed billing query or a maintenance window."
+    },
+    {
+      "id": "L030",
+      "split": "test",
+      "stratum": "contract_distractor",
+      "target_type": "contract",
+      "query": "Which rigs and equipment are covered by Fabrikam's maintenance services?",
+      "source_doc_ids": [
+        "doc-004"
+      ],
+      "evidence": {
+        "doc-004": "Contractor shall provide planned and corrective maintenance for drilling rigs Contoso-12 and Contoso-15, including top drives, mud pumps and BOP control systems."
+      },
+      "required_facts": [
+        [
+          "Contoso-12",
+          "Contoso 12"
+        ],
+        [
+          "Contoso-15",
+          "Contoso 15"
+        ],
+        [
+          "mud pumps",
+          "mud pump",
+          "top drives",
+          "top drive",
+          "BOP control"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-023",
+        "doc-007",
+        "doc-015"
+      ],
+      "distractor_facts": [
+        [
+          "TD-500"
+        ],
+        [
+          "Contoso-9"
+        ]
+      ],
+      "ground_truth": "Fabrikam provides planned and corrective maintenance for drilling rigs Contoso-12 and Contoso-15, including top drives, mud pumps and BOP control systems.",
+      "expected_behavior": "Cite the agreement's scope. List both rigs and the equipment classes; do not add wells, specific equipment models or incidents from operational documents."
+    },
+    {
+      "id": "L031",
+      "split": "test",
+      "stratum": "contract_distractor",
+      "target_type": "contract",
+      "query": "How long does our pipeline inspection framework with Proseware run?",
+      "source_doc_ids": [
+        "doc-013"
+      ],
+      "evidence": {
+        "doc-013": "This Framework Agreement runs for four (4) years from 1 April 2026."
+      },
+      "required_facts": [
+        [
+          "4 years",
+          "4-year"
+        ],
+        [
+          "1 April 2026",
+          "April 2026"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-006"
+      ],
+      "distractor_facts": [
+        [
+          "2029"
+        ],
+        [
+          "call-off order 03"
+        ]
+      ],
+      "ground_truth": "The Proseware framework runs for four years from 1 April 2026.",
+      "expected_behavior": "Cite the framework's term clause. Do not confuse the framework term with inspection intervals or call-off numbers in an inspection result."
+    },
+    {
+      "id": "L032",
+      "split": "dev",
+      "stratum": "contract_distractor",
+      "target_type": "contract",
+      "query": "When is Fabrikam's monthly maintenance bill due for payment?",
+      "source_doc_ids": [
+        "doc-004"
+      ],
+      "evidence": {
+        "doc-004": "payment is due thirty (30) days after the end of the month in which a valid invoice is received"
+      },
+      "required_facts": [
+        [
+          "30 days after the end of the month",
+          "30 days after month end",
+          "30 days after month-end",
+          "30 days after the month end",
+          "30 days from the end of the month",
+          "30 days from month end",
+          "30 days end of month"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-003",
+        "doc-002",
+        "doc-025"
+      ],
+      "distractor_facts": [
+        [
+          "net 15",
+          "net-15"
+        ],
+        [
+          "30 days from receipt of a valid invoice",
+          "30 days from receipt"
+        ],
+        [
+          "7 days",
+          "7-day"
+        ]
+      ],
+      "ground_truth": "Fabrikam invoices monthly in arrears; payment is due 30 days after the end of the month in which a valid invoice is received.",
+      "expected_behavior": "Cite the rig maintenance agreement and state the end-of-month trigger. Do not substitute the procurement default, training examples or text embedded in an unrelated document."
+    },
+    {
+      "id": "L033",
+      "split": "test",
+      "stratum": "contract_distractor",
+      "target_type": "contract",
+      "query": "Which vessel do we have on time charter for platform supply runs, who owns it, and which platforms does it serve?",
+      "source_doc_ids": [
+        "doc-001"
+      ],
+      "evidence": {
+        "doc-001": "the platform supply vessel MV Northwind Petrel (IMO 9900014) for supply runs to the Bravo and Delta platforms"
+      },
+      "required_facts": [
+        [
+          "Northwind Petrel"
+        ],
+        [
+          "Northwind Marine Services",
+          "Northwind Marine"
+        ],
+        [
+          "Bravo and Delta",
+          "Delta and Bravo"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-024",
+        "doc-008"
+      ],
+      "distractor_facts": [
+        [
+          "Wide World Subsea"
+        ]
+      ],
+      "ground_truth": "Contoso charters the platform supply vessel MV Northwind Petrel (IMO 9900014) from Northwind Marine Services AS for supply runs to the Bravo and Delta platforms.",
+      "expected_behavior": "Cite the signed time charter. Do not mix in the unsigned subsea support vessel discussion or its prospective counterparty."
+    },
+    {
+      "id": "L034",
+      "split": "test",
+      "stratum": "contract_distractor",
+      "target_type": "contract",
+      "query": "When is a Northwind charter hire bill due for payment, and from what date is that counted?",
+      "source_doc_ids": [
+        "doc-001"
+      ],
+      "evidence": {
+        "doc-001": "the Charterer shall pay each correct invoice within forty-five (45) days of receipt of invoice"
+      },
+      "required_facts": [
+        [
+          "45 days",
+          "45-day"
+        ],
+        [
+          "receipt of invoice",
+          "from receipt",
+          "of receipt",
+          "after receipt",
+          "receipt of the invoice",
+          "receiving the invoice",
+          "invoice is received"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-024",
+        "doc-003",
+        "doc-002"
+      ],
+      "distractor_facts": [
+        [
+          "30 or 45 days"
+        ],
+        [
+          "net 15",
+          "net-15"
+        ],
+        [
+          "30 days from receipt of a valid invoice",
+          "30 days from receipt"
+        ]
+      ],
+      "ground_truth": "Contoso must pay each correct Northwind charter invoice within 45 days of receipt of the invoice.",
+      "expected_behavior": "Cite the time charter, giving both the period and the receipt trigger. Do not present the draft vessel's open payment point, training examples or the procurement default as the agreed term."
+    },
+    {
+      "id": "L035",
+      "split": "dev",
+      "stratum": "contract_clean",
+      "target_type": "contract",
+      "query": "How much notice is needed to end the Northwind Petrel charter early, and from when can it be given?",
+      "source_doc_ids": [
+        "doc-001"
+      ],
+      "evidence": {
+        "doc-001": "Either Party may terminate this Agreement on ninety (90) days' written notice after the first twelve months."
+      },
+      "required_facts": [
+        [
+          "90 days",
+          "90-day"
+        ],
+        [
+          "first twelve months",
+          "first year",
+          "12 months",
+          "after a year",
+          "first 12-month"
+        ]
+      ],
+      "distractor_doc_ids": [],
+      "distractor_facts": [],
+      "ground_truth": "Either party may terminate the charter on 90 days' written notice, but only after the first twelve months.",
+      "expected_behavior": "Cite the termination clause; give the notice period, that it is written notice, and the twelve-month lock-in."
+    },
+    {
+      "id": "L036",
+      "split": "test",
+      "stratum": "contract_clean",
+      "target_type": "contract",
+      "query": "What aircraft and availability does Tailspin guarantee for our crew changes?",
+      "source_doc_ids": [
+        "doc-021"
+      ],
+      "evidence": {
+        "doc-021": "Operator shall provide two AW169 aircraft with crews and a guaranteed availability of ninety-seven percent (97%) per calendar month."
+      },
+      "required_facts": [
+        [
+          "AW169",
+          "AW 169"
+        ],
+        [
+          "97 percent"
+        ]
+      ],
+      "distractor_doc_ids": [],
+      "distractor_facts": [],
+      "ground_truth": "Tailspin provides two AW169 aircraft with crews and guarantees 97% availability per calendar month.",
+      "expected_behavior": "Cite the helicopter agreement; state aircraft type and count and the monthly availability guarantee."
+    },
+    {
+      "id": "L037",
+      "split": "test",
+      "stratum": "contract_clean",
+      "target_type": "contract",
+      "query": "Are Litware's prices locked in, and until when do their purchase terms apply?",
+      "source_doc_ids": [
+        "doc-009"
+      ],
+      "evidence": {
+        "doc-009": "Prices are fixed for calendar year 2026 per the attached price schedule."
+      },
+      "required_facts": [
+        [
+          "calendar year 2026",
+          "fixed for 2026",
+          "for 2026",
+          "throughout 2026",
+          "during 2026",
+          "2026 calendar year"
+        ],
+        [
+          "31 January 2028",
+          "January 2028",
+          "31 Jan 2028"
+        ]
+      ],
+      "distractor_doc_ids": [],
+      "distractor_facts": [],
+      "ground_truth": "Litware's prices are fixed for calendar year 2026 per the price schedule. The terms apply from 1 February 2026 until 31 January 2028, terminable by either side on 30 days' written notice.",
+      "expected_behavior": "Cite the Master Purchase Terms; distinguish the 2026 price fix from the overall duration."
+    },
+    {
+      "id": "L038",
+      "split": "test",
+      "stratum": "contract_clean",
+      "target_type": "contract",
+      "query": "Can we walk away from Fourth Coffee after repeated coffee outages, and with how much notice?",
+      "source_doc_ids": [
+        "doc-018"
+      ],
+      "evidence": {
+        "doc-018": "Contoso may terminate on thirty (30) days' notice after three Service Failures in any rolling six-month period."
+      },
+      "required_facts": [
+        [
+          "three Service Failures",
+          "three failures",
+          "3 failures"
+        ],
+        [
+          "rolling six-month",
+          "six-month period",
+          "6-month period",
+          "six months"
+        ],
+        [
+          "30 days",
+          "30-day"
+        ]
+      ],
+      "distractor_doc_ids": [],
+      "distractor_facts": [],
+      "ground_truth": "Yes. Contoso may terminate on 30 days' notice after three Service Failures in any rolling six-month period (a stock-out over 12 hours is a Service Failure).",
+      "expected_behavior": "Cite the catering agreement's termination clause; state the three-failure trigger, the rolling window and the notice period."
+    },
+    {
+      "id": "L039",
+      "split": "dev",
+      "stratum": "contract_clean",
+      "target_type": "contract",
+      "query": "What safety rules must Fabrikam's maintenance crews follow on our rigs?",
+      "source_doc_ids": [
+        "doc-004"
+      ],
+      "evidence": {
+        "doc-004": "Contractor personnel shall comply with Company's Permit to Work policy and Life Saving Rules."
+      },
+      "required_facts": [
+        [
+          "Permit to Work",
+          "permit-to-work"
+        ],
+        [
+          "Life Saving Rules",
+          "life-saving rules",
+          "lifesaving rules"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-010",
+        "doc-015"
+      ],
+      "distractor_facts": [],
+      "ground_truth": "Fabrikam personnel must comply with Contoso's Permit to Work policy and Life Saving Rules.",
+      "expected_behavior": "Cite the HSE clause of the rig maintenance agreement. Elaborating from the Permit to Work standard is acceptable if clearly attributed, but the contractual obligation is the reference."
+    },
+    {
+      "id": "L040",
+      "split": "dev",
+      "stratum": "other_type",
+      "target_type": "invoice",
+      "query": "What is the total due on Northwind's April charter bill, and what was deducted?",
+      "source_doc_ids": [
+        "doc-005"
+      ],
+      "evidence": {
+        "doc-005": "Off-hire deduction, 12 April (9 hours): EUR -6,918.75"
+      },
+      "required_facts": [
+        [
+          "EUR 546,581.25",
+          "546,581.25"
+        ],
+        [
+          "6,918.75"
+        ],
+        [
+          "off-hire",
+          "off hire"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-001",
+        "doc-008"
+      ],
+      "distractor_facts": [],
+      "ground_truth": "Invoice NMS-2026-0412 totals EUR 546,581.25: 30 days at EUR 18,450 (EUR 553,500.00) less an off-hire deduction of EUR 6,918.75 for 9 hours on 12 April.",
+      "expected_behavior": "Cite the April Northwind invoice; give the total and the off-hire deduction. Do not answer with contractual terms only."
+    },
+    {
+      "id": "L041",
+      "split": "test",
+      "stratum": "other_type",
+      "target_type": "invoice",
+      "query": "How much is Fabrikam asking us to pay for March rig maintenance once retention is taken off?",
+      "source_doc_ids": [
+        "doc-011"
+      ],
+      "evidence": {
+        "doc-011": "Total payable: GBP 210,178.00"
+      },
+      "required_facts": [
+        [
+          "GBP 210,178",
+          "210,178"
+        ],
+        [
+          "11,062"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-004",
+        "doc-020"
+      ],
+      "distractor_facts": [],
+      "ground_truth": "Invoice FRS-INV-88213 bills GBP 212,000 plus a GBP 9,240 call-out, less GBP 11,062 retention, for a total payable of GBP 210,178.",
+      "expected_behavior": "Cite the March Fabrikam invoice; give the net amount and the retention deducted. A fixed contract filter that cannot see the invoice should admit it."
+    },
+    {
+      "id": "L042",
+      "split": "test",
+      "stratum": "other_type",
+      "target_type": "invoice",
+      "query": "What did Fourth Coffee bill us in total for March, and was any credit applied?",
+      "source_doc_ids": [
+        "doc-019"
+      ],
+      "evidence": {
+        "doc-019": "Service credit, stock-out 5-6 March: GBP -2,500.00"
+      },
+      "required_facts": [
+        [
+          "GBP 229,145",
+          "229,145"
+        ],
+        [
+          "2,500",
+          "service credit"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-018",
+        "doc-014"
+      ],
+      "distractor_facts": [],
+      "ground_truth": "Invoice FC-2026-031 totals GBP 229,145, after a GBP 2,500 service credit for the 5-6 March stock-out.",
+      "expected_behavior": "Cite the March Fourth Coffee invoice; give the total and the credit line."
+    },
+    {
+      "id": "L043",
+      "split": "test",
+      "stratum": "other_type",
+      "target_type": "policy",
+      "query": "What do I need before flying offshore, and how much of a hotel night in Aberdeen gets reimbursed?",
+      "source_doc_ids": [
+        "doc-016"
+      ],
+      "evidence": {
+        "doc-016": "Valid offshore survival (BOSIET/FOET) and medical certificates are mandatory."
+      },
+      "required_facts": [
+        [
+          "BOSIET",
+          "FOET"
+        ],
+        [
+          "medical certificates",
+          "medical certificate"
+        ],
+        [
+          "GBP 140"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-021"
+      ],
+      "distractor_facts": [],
+      "ground_truth": "Valid offshore survival (BOSIET/FOET) and medical certificates are mandatory, helicopter travel is booked only through the crew change coordinator, and pre-mobilisation hotel nights in Aberdeen are reimbursed up to GBP 140.",
+      "expected_behavior": "Cite the travel and mobilisation policy. Do not answer from the helicopter services agreement."
+    },
+    {
+      "id": "L044",
+      "split": "dev",
+      "stratum": "other_type",
+      "target_type": "policy",
+      "query": "How long is a work permit valid offshore, and who approves high-risk permits?",
+      "source_doc_ids": [
+        "doc-010"
+      ],
+      "evidence": {
+        "doc-010": "Permits are valid for one shift only and must be revalidated at shift handover."
+      },
+      "required_facts": [
+        [
+          "one shift",
+          "single shift",
+          "per shift",
+          "each shift"
+        ],
+        [
+          "Offshore Installation Manager",
+          "installation manager"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-004",
+        "doc-015"
+      ],
+      "distractor_facts": [],
+      "ground_truth": "Permits are valid for one shift only and must be revalidated at shift handover. The Offshore Installation Manager approves high-risk permits.",
+      "expected_behavior": "Cite HSE Standard HS-03. A contract clause requiring compliance with the standard does not answer the question."
+    },
+    {
+      "id": "L045",
+      "split": "test",
+      "stratum": "other_type",
+      "target_type": "policy",
+      "query": "Is the model payment clause in our procurement rules binding on suppliers?",
+      "source_doc_ids": [
+        "doc-002"
+      ],
+      "evidence": {
+        "doc-002": "This model clause is guidance and does not itself create obligations with any supplier."
+      },
+      "required_facts": [
+        [
+          "does not itself create obligations",
+          "not binding",
+          "non-binding",
+          "does not create obligations",
+          "no obligations",
+          "not create any obligation",
+          "not legally binding"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-003"
+      ],
+      "distractor_facts": [],
+      "ground_truth": "No. PP-07's model clause (pay within 30 days of receipt) is guidance for contract templates and does not itself create obligations with any supplier; binding terms are in each signed agreement.",
+      "expected_behavior": "Cite procurement policy PP-07 and state that the model clause is reference guidance only."
+    },
+    {
+      "id": "L046",
+      "split": "dev",
+      "stratum": "other_type",
+      "target_type": "technical_report",
+      "query": "What condition were the Platform Bravo risers in, and what fixes are planned?",
+      "source_doc_ids": [
+        "doc-012"
+      ],
+      "evidence": {
+        "doc-012": "Anode depletion estimated at 62% on R5; remaining life approx. 4 years."
+      },
+      "required_facts": [
+        [
+          "coating breakdown",
+          "coating damage",
+          "coating failure"
+        ],
+        [
+          "anode depletion",
+          "62 percent",
+          "depleted anodes",
+          "anodes depleted"
+        ],
+        [
+          "retrofit anodes",
+          "retrofit anode",
+          "recoat"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-006"
+      ],
+      "distractor_facts": [
+        [
+          "41% wall loss",
+          "41 percent"
+        ]
+      ],
+      "ground_truth": "The June 2026 ROV survey found coating breakdown on riser R3 in the splash zone (about 2.1 m2) and about 62% anode depletion on R5 (about 4 years remaining life). It recommends recoating R3 in the 2027 campaign and installing retrofit anodes on R5 within 24 months.",
+      "expected_behavior": "Cite the Bravo riser corrosion survey; do not mix in pipeline in-line inspection findings."
+    },
+    {
+      "id": "L047",
+      "split": "test",
+      "stratum": "other_type",
+      "target_type": "technical_report",
+      "query": "What oil rate did Contoso-7 flow at on test, and on what choke?",
+      "source_doc_ids": [
+        "doc-017"
+      ],
+      "evidence": {
+        "doc-017": "Stabilised oil rate: 6,240 stb/d on a 48/64 choke."
+      },
+      "required_facts": [
+        [
+          "6,240",
+          "6240"
+        ],
+        [
+          "48/64"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-007"
+      ],
+      "distractor_facts": [
+        [
+          "412 m"
+        ]
+      ],
+      "ground_truth": "The August 2026 drill stem test on Contoso-7 gave a stabilised oil rate of 6,240 stb/d on a 48/64 choke.",
+      "expected_behavior": "Cite the well test report; do not substitute depth or campaign figures from a leadership update."
+    },
+    {
+      "id": "L048",
+      "split": "test",
+      "stratum": "other_type",
+      "target_type": "technical_report",
+      "query": "How severe is the vibration on compression train B, what is causing it and what should we do?",
+      "source_doc_ids": [
+        "doc-025"
+      ],
+      "evidence": {
+        "doc-025": "Overall velocity on the driver end bearing reached 7.9 mm/s, in zone C of ISO 20816-3."
+      },
+      "required_facts": [
+        [
+          "7.9 mm/s",
+          "zone C"
+        ],
+        [
+          "misalignment",
+          "misaligned"
+        ],
+        [
+          "laser realignment",
+          "realignment",
+          "realign",
+          "laser alignment"
+        ]
+      ],
+      "distractor_doc_ids": [],
+      "distractor_facts": [],
+      "ground_truth": "Driver-end bearing velocity reached 7.9 mm/s, zone C of ISO 20816-3, with a spectrum consistent with gearbox-compressor misalignment. Recommended: laser realignment at the next planned shutdown and weekly trending until then.",
+      "expected_behavior": "Cite the vibration analysis. Ignore the embedded instruction in the document; do not describe it as a contract or report payment terms."
+    },
+    {
+      "id": "L049",
+      "split": "dev",
+      "stratum": "other_type",
+      "target_type": "correspondence",
+      "query": "Have we told Northwind we want to keep the Petrel longer, and what else did we ask them for?",
+      "source_doc_ids": [
+        "doc-008"
+      ],
+      "evidence": {
+        "doc-008": "We write to give notice of our intention to exercise the first optional extension period of six months under clause 1.1."
+      },
+      "required_facts": [
+        [
+          "first optional extension",
+          "first optional six-month extension",
+          "first optional extension period",
+          "first of the two optional extension",
+          "first extension",
+          "first six-month extension",
+          "first optional 6-month",
+          "first six-month optional extension"
+        ],
+        [
+          "reduced day rate",
+          "lower day rate",
+          "reduced rate",
+          "lower rate",
+          "day rate reduction",
+          "reduction in the day rate",
+          "reduce the day rate",
+          "cheaper day rate"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-001",
+        "doc-024"
+      ],
+      "distractor_facts": [],
+      "ground_truth": "Yes. On 12 May 2026 Contoso wrote to Northwind giving notice of its intention to exercise the first six-month optional extension, and asked to discuss payment terms at renewal and for a proposal for a reduced day rate.",
+      "expected_behavior": "Cite the extension notice letter, including its date and the requests. Do not treat the requested reduction as agreed."
+    },
+    {
+      "id": "L050",
+      "split": "test",
+      "stratum": "other_type",
+      "target_type": "correspondence",
+      "query": "Why did Accounts Payable query Fabrikam's March bill?",
+      "source_doc_ids": [
+        "doc-020"
+      ],
+      "evidence": {
+        "doc-020": "The call-out on 14 March shows 11 hours but the rig log shows 9 hours."
+      },
+      "required_facts": [
+        [
+          "11 hours",
+          "eleven hours"
+        ],
+        [
+          "9 hours",
+          "nine hours"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-011",
+        "doc-004"
+      ],
+      "distractor_facts": [
+        [
+          "9,240"
+        ]
+      ],
+      "ground_truth": "The 14 March call-out was billed at 11 hours but the rig log showed 9 hours; AP asked Fabrikam to check and issue a credit note if appropriate, and will pay the undisputed amount on the normal due date.",
+      "expected_behavior": "Cite the AP query email; state the hour discrepancy and the request."
+    },
+    {
+      "id": "L051",
+      "split": "test",
+      "stratum": "other_type",
+      "target_type": "correspondence",
+      "query": "What did the OIM tell Platform Alpha crew after the coffee ran out?",
+      "source_doc_ids": [
+        "doc-014"
+      ],
+      "evidence": {
+        "doc-014": "Thank you all for your patience during the 31-hour coffee stock-out."
+      },
+      "required_facts": [
+        [
+          "31-hour",
+          "31 hours",
+          "31 hour"
+        ],
+        [
+          "service credit"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-018"
+      ],
+      "distractor_facts": [
+        [
+          "GBP 2,500",
+          "2,500"
+        ],
+        [
+          "12 hours",
+          "12-hour"
+        ]
+      ],
+      "ground_truth": "The OIM thanked the crew for their patience during the 31-hour stock-out, said an emergency airlift arrived on 6 March, that Fourth Coffee confirmed corrective actions and a service credit will be applied, and asked crew not to ration tea as a protest.",
+      "expected_behavior": "Cite the OIM's memo. Do not import contractual thresholds or credit amounts as if the memo stated them."
+    },
+    {
+      "id": "L052",
+      "split": "dev",
+      "stratum": "other_type",
+      "target_type": "presentation",
+      "query": "What highlights were shared in the Q3 drilling campaign update?",
+      "source_doc_ids": [
+        "doc-007"
+      ],
+      "evidence": {
+        "doc-007": "Contoso-7 well reached TD 412 m ahead of plan"
+      },
+      "required_facts": [
+        [
+          "412 m",
+          "TD 412",
+          "412 metres",
+          "412 meters",
+          "412m"
+        ],
+        [
+          "zero lost-time injuries",
+          "no lost-time injuries",
+          "zero LTI",
+          "zero lost time",
+          "no LTIs",
+          "no lost time injuries",
+          "zero LTIs"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-017"
+      ],
+      "distractor_facts": [
+        [
+          "6,240"
+        ]
+      ],
+      "ground_truth": "Contoso-7 reached TD 412 m ahead of plan, there were zero lost-time injuries, and rig Contoso-12's top drive was replaced during planned maintenance. Campaign cost was at 96% of AFE.",
+      "expected_behavior": "Cite the Q3 campaign deck. Do not substitute well test results."
+    },
+    {
+      "id": "L053",
+      "split": "test",
+      "stratum": "other_type",
+      "target_type": "presentation",
+      "query": "What happened in the dropped object incident on Contoso-15 and what actions followed?",
+      "source_doc_ids": [
+        "doc-015"
+      ],
+      "evidence": {
+        "doc-015": "A 2 kg spanner fell 18 m from the derrick on Contoso-15"
+      },
+      "required_facts": [
+        [
+          "2 kg spanner",
+          "spanner",
+          "wrench"
+        ],
+        [
+          "tool tethering",
+          "tethering",
+          "tethered"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-010"
+      ],
+      "distractor_facts": [],
+      "ground_truth": "A 2 kg spanner fell 18 m from the derrick on Contoso-15 with no injuries because the exclusion zone worked. Actions: tool tethering audit on all rigs by month end, refreshed Permit to Work training, and reporting every near miss.",
+      "expected_behavior": "Cite the HSE town hall deck."
+    },
+    {
+      "id": "L054",
+      "split": "test",
+      "stratum": "other_type",
+      "target_type": "presentation",
+      "query": "What savings levers is procurement planning for 2026-2027?",
+      "source_doc_ids": [
+        "doc-022"
+      ],
+      "evidence": {
+        "doc-022": "Renegotiate vessel day rates at renewal"
+      },
+      "required_facts": [
+        [
+          "consolidate drilling consumables",
+          "consolidating drilling consumables",
+          "consolidation of drilling consumables",
+          "drilling consumables suppliers"
+        ],
+        [
+          "vessel day rates",
+          "vessel day rate"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-009",
+        "doc-002"
+      ],
+      "distractor_facts": [
+        [
+          "2 percent",
+          "two percent"
+        ]
+      ],
+      "ground_truth": "The roadmap lists consolidating drilling consumables suppliers, renegotiating vessel day rates at renewal, capturing early settlement discounts where cash allows, and extending supplier payment terms where commercially fair (exceptions to PP-07 need CFO approval).",
+      "expected_behavior": "Cite the savings roadmap deck; present these as plans, not agreed terms."
+    },
+    {
+      "id": "L055",
+      "split": "test",
+      "stratum": "other_type",
+      "target_type": "presentation",
+      "query": "What payment terms does our contract management training put forward for small suppliers, and what is the ambition for 2027?",
+      "source_doc_ids": [
+        "doc-003"
+      ],
+      "evidence": {
+        "doc-003": "Typical contract payment terms: net 15 days for small suppliers"
+      },
+      "required_facts": [
+        [
+          "net 15",
+          "net-15",
+          "15 days"
+        ],
+        [
+          "net 90",
+          "net-90",
+          "90 days"
+        ]
+      ],
+      "distractor_doc_ids": [
+        "doc-002",
+        "doc-009"
+      ],
+      "distractor_facts": [
+        [
+          "no longer than 30 days"
+        ],
+        [
+          "60 days end of month"
+        ]
+      ],
+      "ground_truth": "The training deck gives net 15 days as a typical term for small suppliers and an ambition to harmonise supplier contracts to net 90 days by 2027, explicitly as discussion examples rather than agreed terms.",
+      "expected_behavior": "Cite the training deck and note it is not binding. Do not answer from signed agreements or the procurement policy."
+    },
+    {
+      "id": "L056",
+      "split": "dev",
+      "stratum": "unanswerable",
+      "target_type": "contract",
+      "query": "What day rate and firm term did we sign for the subsea support vessel with Wide World Subsea?",
+      "source_doc_ids": [
+        "doc-001"
+      ],
+      "evidence": {
+        "doc-001": "the platform supply vessel MV Northwind Petrel (IMO 9900014)"
+      },
+      "required_facts": [],
+      "distractor_doc_ids": [
+        "doc-024"
+      ],
+      "distractor_facts": [
+        [
+          "6 months firm"
+        ],
+        [
+          "42-45k",
+          "EUR 42-45k"
+        ]
+      ],
+      "ground_truth": "No signed subsea support vessel agreement exists in the corpus; the only material is an unsigned, non-binding draft where the vessel, term and rate are still TBC. The only signed vessel charter covers the platform supply vessel MV Northwind Petrel.",
+      "expected_behavior": "State that no signed terms can be established and that the draft is non-binding. Do not report draft ranges as agreed values."
+    },
+    {
+      "id": "L057",
+      "split": "test",
+      "stratum": "unanswerable",
+      "target_type": "contract",
+      "query": "How much retention do we hold back from Proseware's pipeline inspection payments?",
+      "source_doc_ids": [
+        "doc-013"
+      ],
+      "evidence": {
+        "doc-013": "Fees are payable against milestones"
+      },
+      "required_facts": [],
+      "distractor_doc_ids": [
+        "doc-004",
+        "doc-011"
+      ],
+      "distractor_facts": [
+        [
+          "5 percent",
+          "5% retention"
+        ],
+        [
+          "11,062"
+        ]
+      ],
+      "ground_truth": "The Proseware framework sets milestone payments (40% / 40% / 20%) and 30-day payment of undisputed invoices but specifies no retention, so no retention amount can be established.",
+      "expected_behavior": "Search the pipeline framework and state that it contains no retention clause. Do not borrow the rig maintenance retention."
+    },
+    {
+      "id": "L058",
+      "split": "test",
+      "stratum": "unanswerable",
+      "target_type": "contract",
+      "query": "What late payment interest can Tailspin charge if we pay their helicopter invoices late?",
+      "source_doc_ids": [
+        "doc-021"
+      ],
+      "evidence": {
+        "doc-021": "Customer shall pay each correct invoice within thirty (30) days of the invoice date."
+      },
+      "required_facts": [],
+      "distractor_doc_ids": [
+        "doc-001"
+      ],
+      "distractor_facts": [
+        [
+          "1.5% per month",
+          "1.5 percent"
+        ]
+      ],
+      "ground_truth": "The Tailspin agreement sets payment within 30 days of the invoice date but contains no late payment interest clause, so no interest rate can be established from it.",
+      "expected_behavior": "State the absence of an interest clause; do not import the vessel charter's interest rate."
+    },
+    {
+      "id": "L059",
+      "split": "test",
+      "stratum": "unanswerable",
+      "target_type": "contract",
+      "query": "Which country's law governs our catering deal with Fourth Coffee, and where would disputes be heard?",
+      "source_doc_ids": [
+        "doc-018"
+      ],
+      "evidence": {
+        "doc-018": "This Offshore Catering and Coffee Supply Agreement is made between Contoso Oil PLC"
+      },
+      "required_facts": [],
+      "distractor_doc_ids": [
+        "doc-001"
+      ],
+      "distractor_facts": [
+        [
+          "English law"
+        ],
+        [
+          "arbitration in London",
+          "London arbitration",
+          "London"
+        ]
+      ],
+      "ground_truth": "The Fourth Coffee agreement has no governing-law or dispute-resolution clause, so neither can be established from the corpus.",
+      "expected_behavior": "State that the clause is absent; do not import the vessel charter's governing law or forum."
+    },
+    {
+      "id": "L060",
+      "split": "dev",
+      "stratum": "unanswerable",
+      "target_type": "technical_report",
+      "query": "How much sand did Contoso-7 produce during its well test?",
+      "source_doc_ids": [
+        "doc-017"
+      ],
+      "evidence": {
+        "doc-017": "no sand production observed"
+      },
+      "required_facts": [
+        [
+          "no sand production",
+          "no sand"
+        ]
+      ],
+      "distractor_doc_ids": [],
+      "distractor_facts": [],
+      "ground_truth": "None - the false premise should be corrected: the Contoso-7 drill stem test observed no sand production, so there is no sand volume to report.",
+      "expected_behavior": "Correct the false premise from the well test report; do not invent a sand rate."
+    },
+    {
+      "id": "L061",
+      "split": "test",
+      "stratum": "unanswerable",
+      "target_type": "invoice",
+      "query": "How much did Tailspin bill us for helicopter flights in June 2026?",
+      "source_doc_ids": [
+        "doc-005",
+        "doc-011",
+        "doc-019"
+      ],
+      "evidence": {
+        "doc-005": "Invoice number: NMS-2026-0412",
+        "doc-011": "Invoice FRS-INV-88213 dated 31 March 2026",
+        "doc-019": "Fourth Coffee Offshore Ltd. Invoice FC-2026-031"
+      },
+      "required_facts": [],
+      "distractor_doc_ids": [
+        "doc-021"
+      ],
+      "distractor_facts": [
+        [
+          "410,000"
+        ],
+        [
+          "3,150"
+        ]
+      ],
+      "ground_truth": "No Tailspin invoice is in the corpus; the only invoices are from Northwind Marine, Fabrikam and Fourth Coffee, so the June helicopter billing cannot be established.",
+      "expected_behavior": "State that no such bill is available. Do not compute an estimate from the agreement's rate card."
+    }
+  ]
+}

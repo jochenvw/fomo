@@ -53,7 +53,8 @@ def inventory(env: Environment, names: ParticipantNames) -> dict[str, Any]:
         name = getattr(names, attr)
         if search.get(kind, name) is not None:
             inv["search"].append(f"{kind}/{name}")
-    for name in (names.simple_rag_agent, names.smart_rag_agent, names.metadata_miner_agent):
+    for name in (names.simple_rag_agent, names.smart_rag_agent, names.metadata_miner_agent,
+                 *names.eval_route_agents):
         if agents.exists(name):
             inv["agents"].append(name)
     if cont.exists():

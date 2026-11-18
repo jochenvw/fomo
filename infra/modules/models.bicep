@@ -1,4 +1,5 @@
-// The three model deployments the workshop needs: chat, embeddings, Microsoft-Decision-1.
+// The three model deployments the workshop needs: chat, embeddings, Microsoft-Decision-1.1
+// (plus an optional facilitator evaluation judge).
 // Deployments on one account must be created serially (@batchSize(1)).
 
 param accountName string

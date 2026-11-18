@@ -1,0 +1,205 @@
+{
+  "name": "contoso-oil-rag",
+  "version": "v1",
+  "corpus_version": "2026.1",
+  "description": "Paired evaluation of the existing Simple RAG and contracts-scoped Smart RAG. References are evaluation-only, never agent input. Report contract, non-contract and unanswerable slices separately.",
+  "queries": [
+    {
+      "id": "rag01",
+      "category": "contract",
+      "query": "What payment terms apply under our supplier contracts?",
+      "source_doc_ids": ["doc-001", "doc-004", "doc-009", "doc-013", "doc-018", "doc-021"],
+      "evidence": {
+        "doc-001": "within forty-five (45) days of receipt of invoice",
+        "doc-004": "payment is due thirty (30) days after the end of the month",
+        "doc-009": "sixty (60) days end of month",
+        "doc-013": "within thirty (30) days of receipt",
+        "doc-018": "within thirty (30) days of receipt",
+        "doc-021": "within thirty (30) days of the invoice date"
+      },
+      "ground_truth": "Northwind vessel charter: 45 days from receipt. Fabrikam rig maintenance: 30 days after the end of the month a valid invoice is received. Litware drilling consumables: 60 days end of month. Proseware pipeline inspection: 30 days from receipt of undisputed milestone invoices. Fourth Coffee catering: 30 days from receipt of a valid monthly invoice. Tailspin helicopter: 30 days from invoice date. These differ from training aspirations or procurement defaults.",
+      "expected_behavior": "Search and cite the supplier agreements. Distinguish each supplier's payment trigger. Do not present net 15 or net 90 from a training presentation, or the policy default, as signed terms."
+    },
+    {
+      "id": "rag02",
+      "category": "contract",
+      "smoke": true,
+      "query": "What late payment interest applies to the supply vessel charter?",
+      "source_doc_ids": ["doc-001"],
+      "evidence": {"doc-001": "Late payment interest of 1.5% per month"},
+      "ground_truth": "The Northwind vessel charter charges 1.5% per month on undisputed amounts unpaid after the due date.",
+      "expected_behavior": "Search and cite the vessel charter; state 1.5% per month, the undisputed-amount qualification and the overdue trigger."
+    },
+    {
+      "id": "rag03",
+      "category": "contract",
+      "smoke": true,
+      "query": "Which supplier agreements offer a discount for early payment, and how do we qualify?",
+      "source_doc_ids": ["doc-009"],
+      "evidence": {"doc-009": "An early settlement discount of two percent (2%) applies where Buyer pays within ten (10) days of invoice"},
+      "ground_truth": "Litware's Master Purchase Terms for Drilling Consumables offer a 2% early settlement discount if payment is made within 10 days of invoice.",
+      "expected_behavior": "Search and cite the binding Litware purchase terms even though they do not use the literal word contract. State both 2% and the 10-day invoice trigger; do not substitute a training example."
+    },
+    {
+      "id": "rag04",
+      "category": "contract",
+      "query": "How much retention is withheld from rig maintenance payments and when is it released?",
+      "source_doc_ids": ["doc-004"],
+      "evidence": {"doc-004": "retention of five percent (5%) of each payment, released upon acceptance of the annual maintenance audit"},
+      "ground_truth": "Fabrikam's rig maintenance agreement withholds 5% of each payment, released upon acceptance of the annual maintenance audit.",
+      "expected_behavior": "Search and cite the rig maintenance agreement, not just an invoice with a similar retention line. Give the percentage and release condition."
+    },
+    {
+      "id": "rag05",
+      "category": "contract",
+      "query": "What notice and cure periods apply to ending the rig maintenance agreement?",
+      "source_doc_ids": ["doc-004"],
+      "evidence": {"doc-004": "terminate for convenience on sixty (60) days' written notice"},
+      "ground_truth": "Contoso may terminate the rig maintenance agreement for convenience on 60 days' written notice. Either party may terminate immediately for a material breach that has not been remedied within 14 days.",
+      "expected_behavior": "Search and cite the rig agreement. Distinguish the 60-day convenience notice from the 14-day material-breach cure period."
+    },
+    {
+      "id": "rag06",
+      "category": "contract",
+      "query": "How are pipeline inspection framework fees split across milestones, and when are milestone invoices due?",
+      "source_doc_ids": ["doc-013"],
+      "evidence": {"doc-013": "forty percent (40%) on tool run completion"},
+      "ground_truth": "Proseware's pipeline inspection framework pays 40% on tool run completion, 40% on delivery of the preliminary report and 20% on acceptance of the final report. Undisputed milestone invoices are due within 30 days of receipt.",
+      "expected_behavior": "Search and cite the framework agreement. Include all three milestones, their percentages and the invoice payment trigger without confusing inspection findings with contractual terms."
+    },
+    {
+      "id": "rag07",
+      "category": "contract",
+      "query": "What is the supplier liability cap under the pipeline inspection framework?",
+      "source_doc_ids": ["doc-013"],
+      "evidence": {"doc-013": "capped at one hundred percent (100%) of the call-off order value"},
+      "ground_truth": "The supplier's aggregate liability under each pipeline inspection call-off order is capped at 100% of that call-off order's value.",
+      "expected_behavior": "Search and cite the pipeline framework; distinguish the call-off order value from the value of the entire framework."
+    },
+    {
+      "id": "rag08",
+      "category": "contract",
+      "query": "Under the catering agreement, what compensation is owed for a coffee service failure?",
+      "source_doc_ids": ["doc-018"],
+      "evidence": {"doc-018": "service credit of GBP 2,500, deducted from the next invoice"},
+      "ground_truth": "Each service failure under the Fourth Coffee agreement entitles Contoso to a GBP 2,500 service credit deducted from the next invoice.",
+      "expected_behavior": "Search and cite the catering agreement. State the service credit per failure and how it is applied; distinguish a contractual entitlement from an invoice or incident memo."
+    },
+    {
+      "id": "rag09",
+      "category": "contract",
+      "query": "How much coffee stock must Fourth Coffee maintain, and how long can a stock-out last before it is a service failure?",
+      "source_doc_ids": ["doc-018"],
+      "evidence": {"doc-018": "minimum of fourteen (14) days of coffee stock"},
+      "ground_truth": "Fourth Coffee must maintain at least 14 days of coffee stock on each platform at all times. A stock-out exceeding 12 hours is a service failure.",
+      "expected_behavior": "Search and cite the catering agreement and include both thresholds. Do not substitute the duration of a particular incident for the contractual threshold."
+    },
+    {
+      "id": "rag10",
+      "category": "contract",
+      "query": "What fixed and variable charges apply to the helicopter crew transfer service?",
+      "source_doc_ids": ["doc-021"],
+      "evidence": {"doc-021": "GBP 410,000 per month applies, plus GBP 3,150 per flight hour"},
+      "ground_truth": "Tailspin charges GBP 410,000 per month plus GBP 3,150 per flight hour. A fuel surcharge is adjusted quarterly against the published Jet A-1 index.",
+      "expected_behavior": "Search and cite the helicopter agreement. Include monthly and hourly charges and the separately indexed fuel surcharge without inventing a surcharge amount."
+    },
+    {
+      "id": "rag11",
+      "category": "contract",
+      "query": "How much notice does Contoso need to terminate the helicopter agreement for convenience?",
+      "source_doc_ids": ["doc-021"],
+      "evidence": {"doc-021": "one hundred and eighty (180) days' notice"},
+      "ground_truth": "Contoso may terminate the Tailspin helicopter agreement for convenience on 180 days' notice.",
+      "expected_behavior": "Search and cite the helicopter agreement; do not reuse the shorter notice periods from other supplier agreements."
+    },
+    {
+      "id": "rag12",
+      "category": "contract",
+      "query": "Compare the invoice payment deadlines in the vessel charter and the helicopter agreement. Do they start from the same date?",
+      "source_doc_ids": ["doc-001", "doc-021"],
+      "evidence": {
+        "doc-001": "forty-five (45) days of receipt of invoice",
+        "doc-021": "thirty (30) days of the invoice date"
+      },
+      "ground_truth": "No. The Northwind vessel charter allows 45 days from receipt of invoice; the Tailspin helicopter agreement allows 30 days from invoice date. Both the duration and the triggering date differ.",
+      "expected_behavior": "Search and cite both agreements. Explicitly distinguish receipt date from invoice date rather than only listing the durations."
+    },
+    {
+      "id": "rag13",
+      "category": "contract",
+      "query": "Do our actual vessel and drilling-consumables agreements use net 15 or net 90 payment terms?",
+      "source_doc_ids": ["doc-001", "doc-009"],
+      "evidence": {
+        "doc-001": "forty-five (45) days of receipt of invoice",
+        "doc-009": "sixty (60) days end of month"
+      },
+      "ground_truth": "Neither of these agreements uses net 15 or net 90. The vessel charter specifies 45 days from receipt of invoice, and the drilling-consumables terms specify 60 days end of month. Training examples or aspirations do not override these terms.",
+      "expected_behavior": "Search and cite both binding agreements. Reject the false net-15/net-90 premise using their actual terms; do not treat a training deck as contractual authority."
+    },
+    {
+      "id": "rag14",
+      "category": "contract",
+      "query": "What delivery commitment and warranty do Litware's drilling-consumables terms provide?",
+      "source_doc_ids": ["doc-009"],
+      "evidence": {"doc-009": "deliver DAP Aberdeen supply base within ten (10) working days"},
+      "ground_truth": "Litware must deliver DAP Aberdeen supply base within 10 working days. The goods must conform to API specifications and be free of defects for 12 months from delivery.",
+      "expected_behavior": "Search and cite the Master Purchase Terms. State working days, the delivery location, API conformity and the 12-month warranty trigger."
+    },
+    {
+      "id": "rag15",
+      "category": "non_contract",
+      "smoke": true,
+      "query": "What did the in-line inspection of export pipeline segment 14 find?",
+      "source_doc_ids": ["doc-006"],
+      "evidence": {"doc-006": "37 external metal-loss features"},
+      "ground_truth": "The inspection found 37 external metal-loss features. The deepest was 41% wall loss at KP 127.4; none exceeded the 60% wall-loss repair criterion.",
+      "expected_behavior": "Search and cite the actual inspection report, not the inspection services agreement. If the available search scope excludes the report, admit that the findings cannot be established rather than inventing them."
+    },
+    {
+      "id": "rag16",
+      "category": "non_contract",
+      "query": "How much were we invoiced for the emergency coffee airlift in March?",
+      "source_doc_ids": ["doc-019"],
+      "evidence": {"doc-019": "emergency airlift, 6 March): GBP 4,880.00"},
+      "ground_truth": "Invoice FC-2026-031 charges GBP 4,880.00 for the emergency coffee-bean airlift on 6 March.",
+      "expected_behavior": "Search and cite invoice FC-2026-031. Distinguish the airlift charge from the GBP 2,500 stock-out credit; if the invoice is inaccessible, admit the limitation."
+    },
+    {
+      "id": "rag17",
+      "category": "non_contract",
+      "query": "What is our default payment term policy for new suppliers, and when is CFO approval required?",
+      "source_doc_ids": ["doc-002"],
+      "evidence": {"doc-002": "Payment terms longer than sixty (60) days require CFO approval"},
+      "ground_truth": "Policy PP-07 defaults new suppliers to 30 days from receipt of a valid invoice. Payment terms longer than 60 days require CFO approval. Small and medium suppliers must be offered no more than 30 days.",
+      "expected_behavior": "Search and cite procurement policy PP-07, not a supplier agreement as evidence of corporate policy. State the default, approval threshold and SME restriction, or disclose that policy is outside the accessible scope."
+    },
+    {
+      "id": "rag18",
+      "category": "non_contract",
+      "query": "What caused the Contoso-12 top-drive failure and what corrective actions were recommended?",
+      "source_doc_ids": ["doc-023"],
+      "evidence": {"doc-023": "Root cause: lubrication contamination following a filter bypass"},
+      "ground_truth": "The maintenance report attributes the failure to lubrication contamination following a filter bypass. It recommends a differential-pressure alarm on the lube filter and monthly oil analysis.",
+      "expected_behavior": "Search and cite the actual top-drive replacement report, not the maintenance agreement or campaign presentation. Include both corrective actions or admit the search-scope limitation."
+    },
+    {
+      "id": "rag19",
+      "category": "unanswerable",
+      "smoke": true,
+      "query": "What numerical liability cap does the helicopter crew transfer agreement specify?",
+      "source_doc_ids": ["doc-021"],
+      "evidence": {"doc-021": "This Crew Transfer Services Agreement"},
+      "ground_truth": "The provided helicopter crew transfer agreement does not specify a numerical liability cap. The assistant should say the value cannot be established from the available document, rather than importing another agreement's cap.",
+      "expected_behavior": "Search the helicopter agreement and explicitly state that no numerical liability cap is provided. Do not reuse the pipeline framework's 100% cap or infer a cap from the monthly charge."
+    },
+    {
+      "id": "rag20",
+      "category": "unanswerable",
+      "query": "What fixed daily penalty does the rig maintenance agreement impose for missing its four-hour response target?",
+      "source_doc_ids": ["doc-004"],
+      "evidence": {"doc-004": "respond to critical breakdowns within four (4) hours"},
+      "ground_truth": "The provided rig maintenance agreement specifies a four-hour critical-breakdown response target but no fixed daily penalty for missing it. The penalty amount cannot be established from this document.",
+      "expected_behavior": "Search and cite the rig agreement for the response target, then disclose that the requested penalty is not stated. Do not invent a daily rate or borrow a service credit from the catering agreement."
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-"""REST client for the Microsoft-Decision-1 provider decision API.
+"""REST client for the Microsoft-Decision-1/1.1 provider decision API.
 
 POST https://<account>.openai.azure.com/providers/microsoft/v1/systemone
 Auth: Entra token for https://cognitiveservices.azure.com/.default
@@ -165,7 +165,8 @@ class DecisionClient:
         except WorkshopError as exc:
             if "HTTP 404" in str(exc) or "HTTP 422" in str(exc):
                 raise DecisionError(
-                    str(exc), fix=f"check that deployment '{self.deployment}' is Microsoft-Decision-1"
+                    str(exc), fix=f"check that deployment '{self.deployment}' is Microsoft-Decision-1.1 "
+                    "(or a compatible Microsoft-Decision deployment)"
                 ) from exc
             raise
         latency = int((time.perf_counter() - start) * 1000)

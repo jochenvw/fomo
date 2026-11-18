@@ -12,7 +12,7 @@ param storageResourceGroup = '<storage-rg>'
 param searchServiceName = '<existing-search-service>'
 param searchResourceGroup = '<search-rg>'
 
-// Leave empty if gpt-5-mini, text-embedding-3-small and Microsoft-Decision-1 already exist.
+// Leave empty if gpt-5-mini, text-embedding-3-small and Microsoft-Decision-1.1 already exist.
 param createModelDeployments = []
 
 param participants = []

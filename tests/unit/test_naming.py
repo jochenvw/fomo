@@ -53,6 +53,10 @@ def test_participant_names(names):
     assert names.smart_rag_agent == "cosmic-wombat-smart-rag"
     assert names.run_dir == ".workshop/runs/cosmic-wombat"
     assert len(set(names.all_names().values())) == len(names.all_names())
+    assert names.smart_route_agent("contract") == names.smart_rag_agent
+    assert names.smart_route_agent("technical_report") == "cosmic-wombat-smart-rag-technical-report"
+    with pytest.raises(NamingError):
+        names.smart_route_agent("memo")
 
 
 @pytest.mark.parametrize("bad", ["ab", "Upper-case", "a--b", "-lead", "trail-", "x" * 64])

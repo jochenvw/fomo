@@ -6,7 +6,7 @@ Contoso Oil asks a RAG agent "What payment terms apply under our supplier contra
 retrieval returns a **training deck about contract management** (doc-003) and a **procurement
 policy** (doc-002) next to real contracts, because they share the vocabulary. The fix is not a
 better prompt but **better metadata**: a hosted *Metadata Miner* classifies every document with
-**Microsoft-Decision-1**, writes `document_type` to Blob metadata, a second Azure AI Search
+**Microsoft-Decision-1.1**, writes `document_type` to Blob metadata, a second Azure AI Search
 index makes it filterable, and *Smart RAG* filters on `document_type eq 'contract'`.
 
 ## 2. Components

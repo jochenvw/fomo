@@ -83,6 +83,59 @@ Reference run (see [`examples/sample-evaluation.md`](../examples/sample-evaluati
 Discussion: the filter wins where the question is about contracts and **hurts** everything else.
 The `smart_desired` row (per-question filter) shows what intent-aware filtering would buy.
 
+### Foundry cloud evaluation
+
+For scored answer quality in the Foundry portal (not just direct Search retrieval), use:
+
+```powershell
+uv run contoso eval-foundry --participant cosmic-wombat --suite smoke --plan
+uv run contoso eval-foundry --participant cosmic-wombat --suite smoke --apply
+uv run contoso eval-foundry --participant cosmic-wombat --suite full --apply
+```
+
+Replace `cosmic-wombat` with your participant name. The default is a four-question smoke
+suite; the full versioned set in `corpus/rag_eval.json` contains 14 contract questions,
+four non-contract controls and two missing-answer cases. Every reference includes actual
+corpus evidence, checked against both live indexes before submitting. References go only
+to the judges, never into agent prompts.
+
+The Foundry SDK registers the dataset and starts two version-pinned agent-target runs in
+one evaluation group. Both use the same relevance, reference-groundedness, similarity and
+completeness evaluators (threshold 4/5), dataset and judge deployment. If dataset registration
+is unavailable, inline inputs are used and the reason is recorded; no storage/connection
+settings are changed. This incurs agent and judge usage charges.
+
+IDs, individual answers, judge reasons, citation metrics, separate category scores and
+portal links are saved under `.foundry/results/`; `.foundry/agent-metadata.yaml` tracks the
+latest run. Groundedness uses curated reference documents, not the actual retrieved tool
+context. Latency is reported only when Foundry supplies it. Do not interpret one small run
+as statistical proof or hide non-contract regressions from the fixed contract filter.
+
+To resume polling/downloading without submitting new paid runs:
+
+```powershell
+uv run contoso eval-foundry --resume .foundry\results\workshop\<eval-id>\manifest.json
+```
+
+### Rigorous comparison (facilitator / after the workshop)
+
+`eval-ladder` answers *which part* of Smart RAG helps or hurts. It compares five variants that
+differ only by index/filter (Simple, Smart without filter, fixed contract filter, Decision
+1.1-routed filter, oracle filter). It uses about 60 verified questions with a dev/test split,
+repeated answers, objective fact/distractor/citation metrics, a different judge model, and
+paired bootstrap confidence intervals. Rules are fixed in
+[evaluation-protocol.md](evaluation-protocol.md).
+
+```powershell
+uv run contoso eval-ladder --participant cosmic-wombat --split dev  --repeats 1           # plan
+uv run contoso eval-ladder --participant cosmic-wombat --split dev  --repeats 1 --apply   # pipeline check
+uv run contoso eval-ladder --participant cosmic-wombat --split test --repeats 3 --apply   # headline
+uv run contoso eval-ladder --resume .foundry\results\ladder\<run>\manifest.json --report-only
+```
+
+The first apply creates six evaluation-only prompt agents (`<name>-smart-rag-<type>` and
+`-any`); `contoso cleanup` removes them. Every apply needs its own approval.
+
 ## 5. Stuck or late?
 
 | Situation | Command |

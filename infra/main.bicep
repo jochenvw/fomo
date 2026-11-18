@@ -6,7 +6,7 @@
 
 targetScope = 'resourceGroup'
 
-@description('Azure region. Must offer Microsoft-Decision-1, gpt-5-mini, text-embedding-3-small and hosted agents.')
+@description('Azure region. Must offer Microsoft-Decision-1.1, gpt-5-mini, text-embedding-3-small and hosted agents.')
 param location string = resourceGroup().location
 
 @description('Short name used to derive resource names.')
@@ -48,14 +48,26 @@ param embeddingModel object = {
   capacity: 150
 }
 
-@description('Microsoft-Decision-1 deployment.')
+@description('Microsoft-Decision-1.1 deployment (model version 1).')
 param decisionModel object = {
-  name: 'decision-1'
+  name: 'decision-1-1'
   format: 'Microsoft'
-  model: 'Microsoft-Decision-1'
+  model: 'Microsoft-Decision-1.1'
   version: '1'
   sku: 'GlobalStandard'
   capacity: 50
+}
+
+@description('Facilitator evaluation only (`contoso eval-ladder`): judge from a different model family than the agents. Participants never need it.')
+param deployEvaluationJudge bool = false
+
+param evaluationJudgeModel object = {
+  name: 'gpt-5.4'
+  format: 'OpenAI'
+  model: 'gpt-5.4'
+  version: '2026-03-05'
+  sku: 'GlobalStandard'
+  capacity: 100
 }
 
 @description('Participants / facilitator principals: array of {objectId, principalType: User|Group|ServicePrincipal}.')
@@ -109,11 +121,11 @@ module models 'modules/models.bicep' = {
   name: 'models'
   params: {
     accountName: foundry.outputs.accountName
-    deployments: [
+    deployments: concat([
       chatModel
       embeddingModel
       decisionModel
-    ]
+    ], deployEvaluationJudge ? [evaluationJudgeModel] : [])
   }
 }
 

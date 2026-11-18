@@ -35,6 +35,13 @@ the user asked for cleanup.
 6. `uv run contoso smart` (enable smart indexer, create Smart RAG with `document_type eq 'contract'`).
 7. `uv run contoso eval` (read-only apart from agent calls): before/after table with actual
    top-k hits, filters and citations. Report honestly if Smart RAG does not improve.
+   For scored comparisons in the Foundry portal, use
+   `uv run contoso eval-foundry --participant <hackername> --suite smoke` first, then
+   `--suite full`. Each is a separate paid plan requiring approval before `--apply --yes`.
+   The SDK uses the same corpus-grounded questions and evaluator thresholds for both pinned
+   agent versions. Keep contract/non-contract/missing-answer slices separate, disclose skipped
+   grades and reference-context limitations, and never promise an improvement.
+   `--resume <manifest.json>` retrieves existing results without submitting new paid runs.
 
 Other commands: `uv run contoso agents ask simple|smart "<question>"`,
 `uv run contoso reset-participant --scope metadata|indexes|all`,

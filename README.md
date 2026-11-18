@@ -2,14 +2,14 @@
 
 A 60-minute hands-on workshop on **Microsoft Foundry** + **Azure AI Search**. Participants see a
 plain RAG agent cite the wrong documents, build a hosted **Metadata Miner** that classifies
-documents with **Microsoft-Decision-1**, and measure a **Smart RAG** agent that filters on the new
+documents with **Microsoft-Decision-1.1**, and measure a **Smart RAG** agent that filters on the new
 metadata.
 
 ```
  Simple RAG ──> raw index ─┐                       ┌─> smart index ──> Smart RAG
                            ├── Blob container ─────┤      (document_type eq 'contract')
  25 synthetic docs ────────┘        ▲              │
-                                    └── Metadata Miner (hosted agent, Decision-1)
+                                    └── Metadata Miner (hosted agent, Decision-1.1)
 ```
 
 Reference result: canonical question q01, **P@5 0.40 → 1.00**. The fixed filter also **hurts**
@@ -62,7 +62,7 @@ Customer-owned Foundry/Search/Storage: `infra/reuse-existing.bicep`. Full timeli
 | Capacity | 7 Search objects per participant; Basic ≤ 7, S1 ≤ 25, S2 ≤ 100 participants | `contoso capacity` |
 | Roles | facilitator: Owner (or Contributor + RBAC Admin) on the RG; participants: 7 scoped role assignments from Bicep, incl. 2 ABAC-limited RBAC Admin | [security-and-rbac](docs/security-and-rbac.md) |
 | Auth | Entra ID only; no keys anywhere | |
-| Region | tested in Sweden Central (needs Decision-1 + hosted agents) | [prerequisites](docs/prerequisites.md) |
+| Region | tested in Sweden Central (needs Decision-1.1 + hosted agents) | [prerequisites](docs/prerequisites.md) |
 
 ## 4. Known limitations
 
@@ -70,7 +70,7 @@ Customer-owned Foundry/Search/Storage: `infra/reuse-existing.bicep`. Full timeli
 2. Hosted agents cannot reach Storage inside a network security perimeter; Storage uses public endpoint + Entra-only ([why](docs/troubleshooting.md#hosted-networking)).
 3. Shared topology isolates by namespace + RBAC, not hard tenancy.
 4. First hosted `miner run` may wait 1-2 min for role propagation (automatic retry).
-5. Microsoft-Decision-1 pricing not published at time of writing; `capacity` reports tokens.
+5. Microsoft-Decision pricing is not included in estimates; `capacity` reports tokens.
 6. Not tested: 40-person live load, private networking.
 
 ## 5. Docs
@@ -80,6 +80,8 @@ Customer-owned Foundry/Search/Storage: `infra/reuse-existing.bicep`. Full timeli
 | [architecture](docs/architecture.md) | how it fits together, fairness of the comparison |
 | [participant guide](docs/participant-guide.md) | the 60 minutes, step by step |
 | [facilitator runbook](docs/facilitator-runbook.md) | before, during, after; 40-person load |
+| [demo script](demo.md) | copy-paste RAW/SMART comparison, measured win, recorded fallback |
+| [evaluation protocol](docs/evaluation-protocol.md) | pre-registered five-variant comparison, metrics, decision rules |
 | [prerequisites](docs/prerequisites.md) | tools, Azure, roles |
 | [security and RBAC](docs/security-and-rbac.md) | role matrix, ABAC, isolation |
 | [troubleshooting](docs/troubleshooting.md) | symptom → cause → fix |

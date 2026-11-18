@@ -11,6 +11,7 @@ build/
 
 # Workshop runtime state: environment, per-participant runs, logs, traces, readiness reports
 .workshop/
+.foundry/
 
 # Local, never-public facilitator files (real parameter files, scratch output)
 .local/

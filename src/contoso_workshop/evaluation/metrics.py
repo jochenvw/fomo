@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from collections import Counter, defaultdict
 from collections.abc import Iterable
 from typing import Any
@@ -32,6 +33,16 @@ def recall_at_k(retrieved: list[str], relevant: Iterable[str], k: int) -> float:
     if not rel:
         return 1.0
     return len(rel.intersection(retrieved[:k])) / len(rel)
+
+
+def ndcg_at_k(retrieved: list[str], relevant: Iterable[str], k: int) -> float:
+    """Binary-relevance nDCG@k: rewards relevant documents near the top."""
+    rel = set(relevant)
+    if not rel:
+        return 1.0
+    dcg = sum(1 / math.log2(rank + 2) for rank, doc in enumerate(retrieved[:k]) if doc in rel)
+    ideal = sum(1 / math.log2(rank + 2) for rank in range(min(len(rel), k)))
+    return round(dcg / ideal, 4)
 
 
 def false_exclusions(relevant: Iterable[str], predicted: dict[str, str], allowed_labels: set[str]) -> list[str]:

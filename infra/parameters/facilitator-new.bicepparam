@@ -10,6 +10,9 @@ param eventId = 'dev'
 // several services. Run `uv run contoso capacity --participants 40` first.
 param searchSku = 'basic'
 
+// Facilitator evaluation judge (gpt-5.4) for `contoso eval-ladder`. Needs gpt-5.4 quota.
+param deployEvaluationJudge = true
+
 // Facilitator (and, for Topology B, a participants Entra group). Fill in object ids.
 param participants = [
   // { objectId: '<facilitator-object-id>', principalType: 'User' }

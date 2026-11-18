@@ -96,6 +96,25 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--k", type=int)
     p.add_argument("--queries", nargs="+", metavar="QID")
 
+    p = sub.add_parser("eval-foundry", help="paired cloud evaluations of Simple/Smart RAG using the Foundry SDK")
+    _common(p, writes=True)
+    p.add_argument("--suite", choices=("smoke", "full"), default="smoke")
+    p.add_argument("--judge", help="existing chat deployment for all judges (default: workshop chat model)")
+    p.add_argument("--workspace", type=Path, default=Path(".foundry"))
+    p.add_argument("--resume", type=Path, help="resume/download a previously submitted evaluation manifest")
+
+    p = sub.add_parser("eval-ladder",
+                       help="five-variant RAG comparison: Decision 1.1 routing, repeats, objective metrics, CIs")
+    _common(p, writes=True)
+    p.add_argument("--split", choices=("dev", "test", "all"), default="dev",
+                   help="dev = pipeline check; test = pre-registered headline result")
+    p.add_argument("--repeats", type=int, help="answers per question and variant (default: 1 dev, 3 test/all)")
+    p.add_argument("--judge", default="gpt-5.4", help="judge deployment; must run a different model than the agents")
+    p.add_argument("--workers", type=int, default=4)
+    p.add_argument("--workspace", type=Path, default=Path(".foundry"))
+    p.add_argument("--resume", type=Path, help="continue an existing ladder manifest.json (plans remaining work)")
+    p.add_argument("--report-only", action="store_true", help="with --resume: rebuild the report, no Azure calls")
+
     p = sub.add_parser("cheatcode", help="complete the demo end to end (same code paths, same approvals)")
     _common(p, writes=True)
     p.add_argument("--classifier", type=Path, help="classifier.yaml (default: reference)")
@@ -371,6 +390,84 @@ def cmd_eval(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def cmd_eval_foundry(args: argparse.Namespace) -> int:
+    from azure.ai.projects import AIProjectClient
+
+    from .azclient import credential
+    from .evaluation import foundry
+
+    ctx = Ctx(args, "eval-foundry")
+    ctx.require_env()
+    if args.resume:
+        with (
+            AIProjectClient(endpoint=ctx.env.resolved_project_endpoint(), credential=credential()) as project,
+            project.get_openai_client() as client,
+        ):
+            report = foundry.collect(client, ctx.env, args.resume)
+        ctx.out(foundry.render(report) + f"\nreport: {report['paths']['markdown']}", report)
+        return EXIT_OK if report["complete"] else EXIT_BLOCKED
+    names = ctx.names()
+    rows = foundry.load_dataset(suite=args.suite)
+    judge = args.judge or ctx.env.chat_deployment
+    with AIProjectClient(endpoint=ctx.env.resolved_project_endpoint(), credential=credential()) as project:
+        context = foundry.inspect_targets(project, ctx.env, names, rows, judge)
+    plan = foundry.evaluation_plan(ctx.env, names, rows, args.suite, context, judge)
+    result: dict[str, Any] = {}
+
+    def apply() -> dict[str, Any]:
+        report = foundry.execute(ctx.env, names, suite=args.suite, judge=judge, root=args.workspace,
+                                rows=rows, context=context)
+        result.update(report)
+        return report
+
+    code = write_flow(ctx, plan, apply,
+                      after=lambda r: foundry.render(r) + f"\nreport: {r['paths']['markdown']}")
+    return EXIT_BLOCKED if result and not result["complete"] else code
+
+
+def cmd_eval_ladder(args: argparse.Namespace) -> int:
+    from .evaluation import ladder
+
+    ctx = Ctx(args, "eval-ladder")
+    if args.resume and args.report_only:
+        report = ladder.finalize(args.resume.parent)
+        ctx.out(ladder.render(report) + f"\nreport: {report['paths']['markdown']}", report)
+        return EXIT_OK if report["complete"] else EXIT_BLOCKED
+    ctx.require_env()
+    names = ctx.names()
+    done: dict[str, int] = {}
+    split, repeats, judge = args.split, args.repeats, args.judge
+    if args.resume:
+        state = json.loads(args.resume.read_text(encoding="utf-8"))
+        split, repeats, judge = state["split"], state["repeats"], state["judge"]
+        saved = args.resume.parent / "responses.jsonl"
+        done = {"routes": int("routes" in state),
+                "responses": len(saved.read_text(encoding="utf-8").splitlines()) if saved.exists() else 0,
+                "retrieval": int((args.resume.parent / "retrieval.json").exists()),
+                "judge": int(bool((state.get("judge_eval") or {}).get("runs")))}
+    repeats = repeats or (1 if split == "dev" else 3)
+    if repeats < 1:
+        raise WorkshopError("--repeats must be at least 1")
+    rows = ladder.load_dataset(split=split)
+    if args.resume:
+        rows = [r for r in rows if r["id"] in set(state["question_ids"])]
+    context = ladder.inspect(ctx.env, names, rows, judge)
+    plan = ladder.build_plan(ctx.env, names, rows, context, split=split, repeats=repeats, judge=judge, done=done)
+
+    result: dict[str, Any] = {}
+
+    def apply() -> dict[str, Any]:
+        report = ladder.execute(ctx.env, names, rows, context, split=split, repeats=repeats, judge=judge,
+                                root=args.workspace, workers=args.workers, state_path=args.resume,
+                                log=ctx.log.info)
+        result.update(report)
+        return report
+
+    code = write_flow(ctx, plan, apply,
+                      after=lambda r: ladder.render(r) + f"\nreport: {r['paths']['markdown']}")
+    return EXIT_BLOCKED if result and not result["complete"] else code
+
+
 def cmd_cheatcode(args: argparse.Namespace) -> int:
     from .provision import ops
     from .provision.participant import render_status, status
@@ -554,7 +651,9 @@ def cmd_facilitator(args: argparse.Namespace) -> int:
 
 COMMANDS: dict[str, Callable[[argparse.Namespace], int]] = {
     "preflight": cmd_preflight, "provision": cmd_provision, "miner": cmd_miner, "smart": cmd_smart,
-    "eval": cmd_eval, "cheatcode": cmd_cheatcode, "status": cmd_status, "reset-participant": cmd_reset,
+    "eval": cmd_eval, "eval-foundry": cmd_eval_foundry, "eval-ladder": cmd_eval_ladder,
+    "cheatcode": cmd_cheatcode, "status": cmd_status,
+    "reset-participant": cmd_reset,
     "cleanup": cmd_cleanup, "capacity": cmd_capacity, "env": cmd_env, "agents": cmd_agents, "infra": cmd_infra,
     "facilitator": cmd_facilitator,
 }

@@ -20,7 +20,7 @@ Windows: run `$env:PYTHONIOENCODING='utf-8'` if your console shows encoding erro
 | Item | Requirement | Checked by preflight |
 |---|---|---|
 | Resource providers | `Microsoft.CognitiveServices`, `Microsoft.Search`, `Microsoft.Storage` registered | `providers.*` |
-| Region | one region with `gpt-5-mini`, `text-embedding-3-small`, `Microsoft-Decision-1` and Foundry hosted agents (tested: **Sweden Central**) | `models.*` |
+| Region | one region with `gpt-5-mini`, `text-embedding-3-small`, `Microsoft-Decision-1.1` and Foundry hosted agents (tested: **Sweden Central**) | `models.*` |
 | Quota | chat TPM ≥ ~1k × participants; see `contoso capacity` | `capacity.chat-tpm` |
 | Search SKU | Basic ≤ 7 participants, S1 ≤ 25, S2 ≤ 100 | `capacity.search` |
 | Policy | no deny on shared-key-free Storage, public endpoint (see [troubleshooting](troubleshooting.md#hosted-networking)) | `policy.*`, `network.hosted-egress` |

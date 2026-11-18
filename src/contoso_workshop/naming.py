@@ -31,6 +31,9 @@ ANIMALS = (
 # Lower-case alnum words joined by single hyphens; 3..24 chars so every derived name fits.
 _HACKERNAME_RE = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
 MAX_HACKERNAME = 24
+# Evaluation-only Smart RAG variants: one agent per document_type filter plus an unfiltered
+# control. `contract` is the workshop's Smart RAG agent itself.
+EVAL_ROUTES = ("any", "invoice", "policy", "technical_report", "correspondence", "presentation")
 
 
 def generate_hackername(rng: secrets.SystemRandom | None = None) -> str:
@@ -108,6 +111,17 @@ class ParticipantNames:
     @property
     def smart_rag_agent(self) -> str:
         return f"{self.hackername}-smart-rag"
+
+    def smart_route_agent(self, route: str) -> str:
+        if route == "contract":
+            return self.smart_rag_agent
+        if route not in EVAL_ROUTES:
+            raise NamingError(f"unknown Smart RAG evaluation route '{route}'")
+        return f"{self.hackername}-smart-rag-{route.replace('_', '-')}"
+
+    @property
+    def eval_route_agents(self) -> list[str]:
+        return [self.smart_route_agent(route) for route in EVAL_ROUTES]
 
     @property
     def run_dir(self) -> str:

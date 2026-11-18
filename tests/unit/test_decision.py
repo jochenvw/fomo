@@ -1,9 +1,18 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+from unittest.mock import Mock
+
 import pytest
 import yaml
 
-from contoso_workshop.decision.client import DecisionResult, _as_probabilities, build_state, normalize_response
+from contoso_workshop.decision.client import (
+    DecisionClient,
+    DecisionResult,
+    _as_probabilities,
+    build_state,
+    normalize_response,
+)
 from contoso_workshop.decision.config import NEEDS_REVIEW, REFERENCE_CONFIG, load_classifier_config
 from contoso_workshop.decision.policy import apply_policy
 from contoso_workshop.errors import ConfigError, DecisionError
@@ -27,6 +36,25 @@ def test_normalize_live_shape():
     assert r.confidence == 0.9
     assert r.margin() == pytest.approx(0.83)
     assert (r.model, r.usage, r.latency_ms, r.request_id) == ("decision-1", {"input_tokens": 10}, 12, "req")
+
+
+def test_decision_11_uses_deployment_alias_and_existing_choice_api(monkeypatch, cfg):
+    body = _body({"type": "choice", "choice": "contract",
+                  "probabilities": {"contract": 0.95, "invoice": 0.05}})
+    body["model"] = "microsoft-decision-1.1"
+    request = Mock(return_value=SimpleNamespace(json=lambda: body, headers={"apim-request-id": "req-11"}))
+    monkeypatch.setattr("contoso_workshop.decision.client.request", request)
+    client = DecisionClient("https://acct.openai.azure.com", "decision-1-1", token_provider=lambda: "token")
+    result = client.classify("A supplier agreement with payment obligations.", cfg)
+    assert request.call_args.args == (
+        "POST", "https://acct.openai.azure.com/providers/microsoft/v1/systemone")
+    payload = request.call_args.kwargs["json_body"]
+    assert payload["model"] == "decision-1-1"
+    assert payload["questions"]["document_type"]["type"] == "choice"
+    assert result.model == "microsoft-decision-1.1"
+    assert result.choice == "contract"
+    assert result.probability_of("contract") == pytest.approx(0.95)
+    assert result.request_id == "req-11"
 
 
 def test_normalize_infers_choice_from_list_probabilities():

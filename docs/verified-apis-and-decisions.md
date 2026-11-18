@@ -83,3 +83,30 @@ Full report: [`examples/sample-evaluation.md`](../examples/sample-evaluation.md)
 | Real 40-person load test | not run; capacity math verified + 4 participants coexisting in the same services |
 | `reuse-existing.bicep` against a customer-owned estate | builds and what-ifs; not deployed into a separate estate |
 | OCR, entity extraction, event-driven ingest, CI/CD for infra | non-goals (goal §11); possible extensions |
+
+## 7. Decision 1.1 upgrade
+
+New deployments default to **Microsoft-Decision-1.1**, model version **`1`**, under the deployment
+alias **`decision-1-1`**. `1.1` is part of the model name, not the ARM model version. The Sweden
+Central account catalog and subscription quota were checked on 2026-11-18; both GlobalStandard
+and DataZoneStandard are offered. The templates retain GlobalStandard and their existing capacities.
+
+The [Decision API documentation](https://learn.microsoft.com/azure/foundry/foundry-models/how-to/use-foundry-models-microsoft-decision)
+specifies the same `/providers/microsoft/v1/systemone` endpoint and `choice` request/response
+contract. Requests still use the **deployment alias**, not the underlying model name.
+Explicitly configured legacy aliases remain supported.
+
+Existing environments are not silently migrated: create the new deployment with approval, update
+`decision_deployment` in the environment/configuration source, and redeploy the hosted miner.
+`contoso env pull` reads saved infrastructure outputs; update those outputs through the normal
+infrastructure deployment before using it again, or it can restore the old alias.
+Existing checkpoints, document metadata and evaluation results remain historical. To refresh
+classifications, plan and approve `miner run --hosted --mode all`, then run the smart indexer.
+The RAG agents and evaluation judge remain generative models, not Decision models.
+The measurements in section 5 and the saved sample reports were produced with Decision 1.
+Live-verified on 2026-11-18 after approval: `decision-1-1` is Microsoft-Decision-1.1 version `1`,
+GlobalStandard capacity `50`, with `NoAutoUpgrade`. Hosted miner `cosmic-wombat-metadata-miner`
+version `2` invoked that deployment successfully with `dry_run=true`: doc-001 was accepted as
+`contract` (probability 0.999646; 950 input tokens). No document metadata was written.
+The old `decision-1` deployment and both RAG agent versions (`1`) were retained; no evaluation
+was rerun. This single smoke classification is not a new corpus-wide accuracy measurement.

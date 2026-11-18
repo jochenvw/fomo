@@ -48,3 +48,21 @@ uv run contoso capacity --participants 40 --sku standard2 --replicas 2 --hours 8
 | End the workshop | `az group delete -n <rg>` + `az cognitiveservices account purge …` | everything |
 
 All destructive commands show an itemized plan and require typing `DELETE`.
+
+## 5. Move to another subscription
+
+Everything is reproducible from this repository; only local result files carry history.
+
+1. `az login` and select the new subscription. Check quota for gpt-5-mini, text-embedding-3-small,
+   Microsoft-Decision-1.1 and (facilitator evaluation) gpt-5.4 in the region.
+2. In `infra/parameters/facilitator-new.bicepparam`, set `participants` to the new tenant's object
+   ids, and set `storagePolicyExemptionTags` only if a governance policy requires it (MCAPS:
+   `SecurityControl: 'Ignore'`).
+3. `uv run contoso infra deploy --parameters infra/parameters/facilitator-new.bicepparam
+   --resource-group <rg> --apply` (writes `.workshop/environment.json`), then
+   `uv run contoso preflight --participants <N>`.
+4. Per participant: `uv run contoso cheatcode --participant <name> --apply` (or the guided steps).
+5. Evaluations: `contoso eval-ladder` recreates its route agents on first apply.
+
+Old Foundry portal links in saved reports stop working after the source project is deleted;
+the downloaded outputs under `.foundry/results/` remain the record.

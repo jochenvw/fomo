@@ -19,7 +19,7 @@ environment:
   chat_deployment: gpt-5-mini
   embedding_deployment: text-embedding-3-small
   embedding_dimensions: 1536
-  decision_deployment: decision-1   # Microsoft-Decision-1
+  decision_deployment: decision-1-1   # Microsoft-Decision-1.1, model version 1
 
   storage_account_name: contosooilstabc123
   search_service_name: contosooil-srch-abc123

@@ -30,7 +30,7 @@ SEARCH_USD_MONTH = {"free": 0.0, "basic": 75.0, "standard": 250.0, "standard2": 
 MODEL_USD_PER_M = {
     "gpt-5-mini": {"input": 0.25, "output": 2.00},
     "text-embedding-3-small": {"input": 0.02, "output": 0.0},
-    "decision-1": None,
+    "decision-1-1": None,
 }
 
 # Measured on the reference corpus (25 docs) during validation; see docs/cost-capacity-cleanup.md.
@@ -106,7 +106,7 @@ def cost_estimate(participants: int, *, search_sku: str, hours: float = 8.0, age
         "chat_usd": round(chat_usd, 2) if chat_usd is not None else None,
         "embedding_usd": round(emb_usd, 4) if emb_usd is not None else None,
         "decision_tokens": decision_tokens,
-        "decision_usd": "unknown (check Foundry pricing for Microsoft-Decision-1)",
+        "decision_usd": "unknown (check Foundry pricing for Microsoft-Decision)",
         "hosted_agents": "billed per session compute; check Foundry Agent Service pricing",
         "total_known_usd": round(search_hour * hours + sum(known), 2),
         "assumptions": {

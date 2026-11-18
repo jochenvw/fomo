@@ -26,9 +26,9 @@ param embeddingModel = {
 }
 
 param decisionModel = {
-  name: 'decision-1'
+  name: 'decision-1-1'
   format: 'Microsoft'
-  model: 'Microsoft-Decision-1'
+  model: 'Microsoft-Decision-1.1'
   version: '1'
   sku: 'GlobalStandard'
   capacity: 10

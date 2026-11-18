@@ -61,7 +61,7 @@ class Environment:
     embedding_deployment: str = "text-embedding-3-small"
     embedding_model: str = "text-embedding-3-small"
     embedding_dimensions: int = 1536
-    decision_deployment: str = "decision-1"
+    decision_deployment: str = "decision-1-1"
 
     storage_account_name: str = ""
     storage_account_id: str = ""
