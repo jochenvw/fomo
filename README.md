@@ -65,6 +65,9 @@ group. Choose an existing group or approve creation of a new empty one, for exam
 in gitignored `.workshop/environment.json`; an empty group is not yet a ready workshop.
 Interrupted reads get bounded retries. If a remembered group is genuinely missing, preflight
 offers re-create / choose existing / create another / defer, with approval before any creation.
+For IT-provisioned private ("standard") Foundry setups it also verifies private endpoints, Search
+shared private links, laptop DNS reach and the managed-identity roles between Foundry, AI Search
+(Foundry IQ) and Storage ([details](docs/troubleshooting.md#private-networking)).
 
 ### Names and existing environments
 
@@ -111,7 +114,7 @@ Customer-owned Foundry/Search/Storage: `infra/reuse-existing.bicep`. Full timeli
 3. Shared topology isolates by namespace + RBAC, not hard tenancy.
 4. First hosted `miner run` may wait 1-2 min for role propagation (automatic retry).
 5. Microsoft-Decision pricing is not included in estimates; `capacity` reports tokens.
-6. Not tested: 40-person live load, private networking.
+6. Not tested: 40-person live load, end-to-end private networking (preflight checks it; the workshop has not run on it).
 
 ## 5. Docs
 

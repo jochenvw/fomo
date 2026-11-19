@@ -268,6 +268,30 @@ hosted agent its container/account roles. A management-plane Contributor role do
 grant data-plane access. Missing roles must be granted by the facilitator/admin, not by
 this skill; scoped/conditional RBAC and functional read-only probes remain separate evidence.
 
+### Private networking and service-to-service RBAC
+
+Enterprise IT often deploys Foundry in the **"standard" (private) setup**: public access
+disabled, private endpoints, and agent VNet injection. Then AI Search (now surfaced as
+**Foundry IQ** in the portal) and Storage must be private too, and the services must trust each
+other's managed identities. Explain the `networking` and `service-identities` checks in
+these terms (the CLI already runs them; never re-probe in prose):
+
+| Check | What it proves | Typical IT fix |
+|---|---|---|
+| `network.foundry/search/storage` | access mode + approved private endpoints; with VNet-injected agents, Search and Storage need private endpoints | add private endpoint + privatelink DNS zone |
+| `network.search-storage`, `network.search-foundry` | Search's own outbound path (indexer -> Blob, embedding skill/vectorizer -> Foundry) to a private target | approved shared private link (`blob`, `openai_account`/`cognitiveservices_account`) |
+| `network.client-*` | this laptop resolves private endpoints to private IPs | participant: corporate network/VPN; IT: link privatelink DNS zone |
+| `ident.search-storage` | Search identity -> Storage Blob Data Reader (indexing) | grant role |
+| `ident.search-foundry` | Search identity -> Cognitive Services OpenAI User (embeddings) | grant role |
+| `ident.project-search*`, `ident.account-search` | Foundry identities -> Search Index Data Reader / Search Service Contributor (RAG) | grant role |
+
+Each fix names the exact role, principal ID and scope. For admin-owned items, draft one
+consolidated IT request listing every failing row (role, principal, scope; endpoint/link/DNS
+zone) so the participant can forward it unchanged. Only `network.client-*` with a public IP
+is the participant's own fix (connect VPN, rerun). Private Storage also triggers
+`network.hosted-egress`: say plainly that the hosted miner needs a reachable Blob endpoint and
+that `--local` is the labelled fallback, not equivalent.
+
 ## 4. Optional remediation (approval required)
 
 Only the safe, participant-level fixes are automated by `preflight --fix`

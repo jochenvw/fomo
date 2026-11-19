@@ -9,10 +9,12 @@ Model smoke calls are opt-in (`--smoke`) because they cost money.
 from __future__ import annotations
 
 import fnmatch
+import ipaddress
 import os
 import platform
 import re
 import shutil
+import socket
 import subprocess  # nosec B404 - fixed argument lists only
 import sys
 import time
@@ -295,6 +297,7 @@ def azure_checks(report: Report, env: Environment, *, participant: str | None, s
     shared = _resources(report, env, rg)
     _models(report, env)
     _policy(report, env, rg, shared)
+    _network(report, env, shared)
     if participant:
         _participant_resources(report, env, participant)
     else:
@@ -500,6 +503,169 @@ def _policy(report: Report, env: Environment, rg: str, shared: dict[str, Any]) -
         n = len(rows.get("value", []))
         return (WARNING if n else PASS), f"{n} deny assignment(s) apply to the resource group"
     _probe(report, "policy.deny", "policy", "Deny assignments", deny, owner="admin", required=False)
+
+
+# ---- networking (enterprise "standard" setups: private endpoints + VNet injection) ------------
+def _resolve(host: str) -> list[str]:
+    return sorted({str(info[4][0]) for info in socket.getaddrinfo(host, 443, proto=socket.IPPROTO_TCP)})
+
+
+def _approved_endpoints(res: dict[str, Any]) -> int:
+    conns = (res.get("properties") or {}).get("privateEndpointConnections") or []
+    return sum(1 for c in conns
+               if (((c.get("properties") or {}).get("privateLinkServiceConnectionState") or {}).get("status")
+                   == "Approved"))
+
+
+def _posture(res: dict[str, Any]) -> str:
+    """public | restricted (firewall/IP rules) | private (public access disabled) | perimeter."""
+    props = res.get("properties") or {}
+    pna = props.get("publicNetworkAccess")
+    if pna == "Disabled":
+        return "private"
+    if pna == "SecuredByPerimeter":
+        return "perimeter"
+    acls = props.get("networkAcls") or {}
+    rules = props.get("networkRuleSet") or {}
+    if acls.get("defaultAction") == "Deny" or rules.get("ipRules"):
+        return "restricted"
+    return "public"
+
+
+def _bypass(res: dict[str, Any]) -> str:
+    props = res.get("properties") or {}
+    return str((props.get("networkAcls") or {}).get("bypass") or (props.get("networkRuleSet") or {}).get("bypass")
+               or "")
+
+
+def _network(report: Report, env: Environment, shared: dict[str, Any]) -> None:
+    cat = "networking"
+    services = {k: shared[k] for k in ("foundry", "search", "storage") if shared.get(k)}
+    if not services:
+        report.add("network.posture", cat, "Network posture", INFO,
+                   "service resources could not be read; networking not assessed", required=False)
+        return
+    labels = {"foundry": "Foundry", "search": "AI Search (Foundry IQ)", "storage": "Storage"}
+    posture = {k: _posture(v) for k, v in services.items()}
+    foundry = services.get("foundry") or {}
+    injected = bool((foundry.get("properties") or {}).get("networkInjections"))
+    standard = injected or posture.get("foundry", "public") != "public"
+
+    for key, res in services.items():
+        pes, mode = _approved_endpoints(res), posture[key]
+        evidence = f"{mode}; {pes} approved private endpoint(s)"
+        if key == "foundry" and injected:
+            evidence += "; agent VNet injection configured"
+        if key == "storage":
+            evidence += f"; bypass={_bypass(res) or 'None'}"
+        status, fix = PASS, ""
+        if mode == "private" and not pes:
+            status = BLOCKED
+            fix = (f"IT/admin: {labels[key]} has public access disabled and no approved private endpoint, so nothing "
+                   f"can reach it; add a private endpoint (+ private DNS zone) in the workshop VNet")
+        elif key != "foundry" and standard and not pes:
+            if injected:
+                status = BLOCKED
+                fix = (f"IT/admin: Foundry agents run inside the customer VNet (network injection); give "
+                       f"{labels[key]} a private endpoint in that VNet with private DNS so agents and indexers "
+                       f"reach it privately")
+            else:
+                status = WARNING
+                fix = (f"IT/admin: Foundry is network-restricted but {labels[key]} has no private endpoint; a "
+                       f"'standard' private setup needs one (+ private DNS) for consistent private traffic")
+        report.add(f"network.{key}", cat, f"{labels[key]} network access", status, evidence, fix,
+                   owner="admin", data={"posture": mode, "private_endpoints": pes})
+
+    search = services.get("search")
+    if search:
+        _search_outbound(report, search, services, posture)
+    _client_reachability(report, env, services, posture)
+
+
+def _search_outbound(report: Report, search: dict[str, Any], services: dict[str, Any], posture: dict[str, str]) -> None:
+    """Search's own traffic: indexer -> Blob and embedding skill/vectorizer -> Foundry."""
+    links: list[dict[str, Any]] | None = None
+    sku = (search.get("sku") or {}).get("name", "")
+    for key, title in (("storage", "Search -> Storage (indexer data source)"),
+                       ("foundry", "Search -> Foundry (embedding skill + vectorizer)")):
+        target = services.get(key)
+        mode = posture.get(key)
+        if not target or mode == "public":
+            if target:
+                report.add(f"network.search-{key}", "networking", title, PASS, f"target is {mode}", owner="admin")
+            continue
+        if links is None:
+            try:
+                resp = arm("GET", f"{search['id']}/sharedPrivateLinkResources", "2025-05-01")
+                links = list(resp.json().get("value", []))
+            except WorkshopError as exc:
+                report.add(f"network.search-{key}", "networking", title, WARNING,
+                           f"target is {mode}; shared private links unreadable: {str(exc)[:300]}",
+                           "IT/admin: confirm Search reaches this service privately", owner="admin", required=False)
+                continue
+        tid = str(target.get("id", "")).lower()
+        approved = [link for link in links
+                    if str((link.get("properties") or {}).get("privateLinkResourceId", "")).lower() == tid
+                    and (link.get("properties") or {}).get("status") == "Approved"]
+        group = "blob" if key == "storage" else "openai_account or cognitiveservices_account"
+        fix = (f"IT/admin: create an approved shared private link from Search to {target.get('name')} "
+               f"(groupId '{group}'), then approve it on the target; requires Search SKU Basic or higher"
+               + (f" (current: {sku})" if sku else ""))
+        if approved:
+            status, evidence = PASS, f"target is {mode}; approved shared private link {approved[0].get('name')}"
+        elif mode == "restricted" and "AzureServices" in _bypass(target):
+            status, evidence = WARNING, (f"target is {mode}; no shared private link, relies on the trusted Azure "
+                                         "services exception (works with managed identity, not if public access "
+                                         "is later disabled)")
+        elif mode == "perimeter":
+            status, evidence = WARNING, "target is in a network security perimeter; Search must be in the same profile"
+            fix = "IT/admin: add the Search service to the target's network security perimeter profile"
+        else:
+            status, evidence = BLOCKED, f"target is {mode}; no approved shared private link from Search"
+        report.add(f"network.search-{key}", "networking", title, status, evidence, fix if status != PASS else "",
+                   owner="admin")
+
+
+def _client_reachability(report: Report, env: Environment, services: dict[str, Any],
+                         posture: dict[str, str]) -> None:
+    """Can *this* machine reach the private endpoints? Private DNS must resolve them to private IPs."""
+    fprops = services.get("foundry", {}).get("properties") or {}
+    fsub = fprops.get("customSubDomainName") or services.get("foundry", {}).get("name")
+    hosts = {
+        "foundry": fprops.get("endpoint") or env.foundry_account_endpoint
+        or (f"https://{fsub}.cognitiveservices.azure.com/" if fsub else ""),
+        "search": env.search_endpoint or (f"https://{services['search']['name']}.search.windows.net"
+                                          if services.get("search") else ""),
+        "storage": ((services.get("storage", {}).get("properties") or {}).get("primaryEndpoints") or {}).get("blob")
+        or env.blob_endpoint,
+    }
+    for key, url in hosts.items():
+        if key not in services or not url:
+            continue
+        if posture.get(key) not in ("private", "perimeter") and not _approved_endpoints(services[key]):
+            continue
+        host = re.sub(r"^https?://", "", url).split("/")[0]
+        title = f"This machine -> {host}"
+        try:
+            ips = _resolve(host)
+        except OSError as exc:
+            report.add(f"network.client-{key}", "networking", title, WARNING, f"DNS lookup failed: {exc}",
+                       "participant: check VPN/proxy, then rerun preflight", required=False)
+            continue
+        private = [ip for ip in ips if ipaddress.ip_address(ip).is_private]
+        if private:
+            report.add(f"network.client-{key}", "networking", title, PASS,
+                       f"resolves to private IP {', '.join(private)} (private endpoint reachable via DNS)")
+        elif posture.get(key) == "private":
+            report.add(f"network.client-{key}", "networking", title, BLOCKED,
+                       f"resolves to public IP {', '.join(ips)} but public access is disabled",
+                       "participant: connect to the corporate network/VPN that has the private DNS zones; "
+                       "if already connected, IT/admin must link the privatelink DNS zone to that network",
+                       owner="participant")
+        else:
+            report.add(f"network.client-{key}", "networking", title, INFO,
+                       f"resolves to public IP {', '.join(ips)}; access depends on firewall/perimeter rules "
+                       "(the data-plane probes are the proof)", required=False)
 
 
 def _participant_resources(report: Report, env: Environment, participant: str) -> None:
@@ -745,26 +911,43 @@ def _identities(report: Report, env: Environment, shared: dict[str, Any]) -> Non
     cat = "service-identities"
     search_pid = ((shared.get("search") or {}).get("identity") or {}).get("principalId")
     project_pid = ((shared.get("project") or {}).get("identity") or {}).get("principalId")
+    account_pid = ((shared.get("foundry") or {}).get("identity") or {}).get("principalId")
+    storage_id, search_id = env.resolved_storage_account_id(), env.search_service_id
+    # (id, title, identity label, principal, scope, accepted roles, role to request, required)
     expect = (
-        ("ident.search-storage", "Search identity -> Blob (indexer reads blobs + metadata)", search_pid,
-         env.resolved_storage_account_id(), {"Storage Blob Data Reader", "Storage Blob Data Contributor"}),
-        ("ident.search-foundry", "Search identity -> Foundry embeddings (skill + vectorizer)", search_pid,
-         env.foundry_account_id, {"Cognitive Services OpenAI User", "Foundry User"}),
-        ("ident.project-search", "Foundry project identity -> Search (agent Search tool)", project_pid,
-         env.search_service_id, {"Search Index Data Reader", "Search Index Data Contributor"}),
+        ("ident.search-storage", "Search identity -> Blob (indexer reads blobs + metadata)", "Search service",
+         search_pid, storage_id, {"Storage Blob Data Reader", "Storage Blob Data Contributor"},
+         "Storage Blob Data Reader", True),
+        ("ident.search-foundry", "Search identity -> Foundry embeddings (skill + vectorizer)", "Search service",
+         search_pid, env.foundry_account_id, {"Cognitive Services OpenAI User", "Foundry User"},
+         "Cognitive Services OpenAI User", True),
+        ("ident.project-search", "Foundry project identity -> Search index (RAG queries)", "Foundry project",
+         project_pid, search_id, {"Search Index Data Reader", "Search Index Data Contributor"},
+         "Search Index Data Reader", True),
+        ("ident.project-search-service", "Foundry project identity -> Search service (index metadata)",
+         "Foundry project", project_pid, search_id, {"Search Service Contributor"}, "Search Service Contributor",
+         False),
+        ("ident.account-search", "Foundry account identity -> Search index (RAG queries)", "Foundry account",
+         account_pid, search_id, {"Search Index Data Reader", "Search Index Data Contributor"},
+         "Search Index Data Reader", False),
     )
-    for cid, title, pid, scope, roles in expect:
+    for cid, title, label, pid, scope, roles, ask, required in expect:
+        target = scope.rsplit("/", 1)[-1]
         if not pid:
-            report.add(cid, cat, title, BLOCKED, "service has no system-assigned identity",
-                       "facilitator: redeploy infra", owner="facilitator")
+            report.add(cid, cat, title, BLOCKED if required else WARNING,
+                       f"{label} has no system-assigned managed identity",
+                       f"IT/admin: enable the system-assigned identity on the {label}, then grant '{ask}' on {target}",
+                       owner="admin", required=required)
             continue
 
-        def fn(pid: str = pid, scope: str = scope, roles: set[str] = roles) -> tuple[str, str]:
+        def fn(pid: str = pid, scope: str = scope, roles: set[str] = roles, required: bool = required,
+               target: str = target) -> tuple[str, str]:
             have = set(role_assignments(scope, pid))
             ok = bool(have & roles)
             held = ", ".join(sorted(have)) or "no roles"
-            return (PASS if ok else BLOCKED), f"principal {pid} at {scope.rsplit('/', 1)[-1]}: {held}"
-        _probe(report, cid, cat, title, fn, fix="facilitator: redeploy infra (rbac modules)", owner="facilitator")
+            return (PASS if ok else BLOCKED if required else WARNING), f"principal {pid} at {target}: {held}"
+        _probe(report, cid, cat, title, fn, owner="admin", required=required,
+               fix=f"IT/admin: grant '{ask}' to the {label} managed identity (principal {pid}) on {scope}")
 
     def functional() -> tuple[str, str]:
         search = SearchClient(env)

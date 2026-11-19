@@ -59,6 +59,23 @@ Some sandbox subscriptions (e.g. MCAP) attach such a perimeter by policy.
 3. If neither is allowed: run the miner with `--local` (clearly labeled fallback; not the hosted
    requirement) and record the constraint in the session notes.
 
+<a id="private-networking"></a>
+### Private ("standard") Foundry setups
+
+When IT deploys Foundry with private endpoints and agent VNet injection, preflight's
+`networking` and `service-identities` checks verify the whole chain:
+
+- **Endpoints:** Foundry, AI Search (Foundry IQ) and Storage each need an approved private
+  endpoint when public access is disabled; with VNet-injected agents, Search and Storage need
+  one too (`network.<service>`).
+- **Search outbound:** indexer -> private Blob and embedding skill/vectorizer -> private Foundry
+  need approved shared private links (`network.search-storage`, `network.search-foundry`).
+- **Your laptop:** private endpoints must resolve to private IPs (`network.client-*`); a public
+  IP means you are off the corporate network/VPN or the privatelink DNS zone is not linked.
+- **Managed-identity RBAC:** Search -> Storage *Storage Blob Data Reader*; Search -> Foundry
+  *Cognitive Services OpenAI User*; Foundry project/account -> Search *Search Index Data Reader*
+  (+ *Search Service Contributor*). Each fix names the role, principal ID and scope for IT.
+
 ## 5. Evaluation
 
 | Symptom | Cause | Fix |

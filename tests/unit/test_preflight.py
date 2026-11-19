@@ -354,3 +354,63 @@ def test_search_document_access_uses_registered_read_and_write_actions(monkeypat
     checks = {c.id: c for c in report.checks}
     assert checks["rbac.search-read"].status == PASS
     assert checks["rbac.search-documents"].status == (PASS if writer else BLOCKED)
+
+
+def _svc(env, kind, pna="Enabled", pes=0, **props):
+    ids = {"foundry": env.foundry_account_id, "search": env.search_service_id,
+           "storage": env.resolved_storage_account_id()}
+    conns = [{"properties": {"privateLinkServiceConnectionState": {"status": "Approved"}}}] * pes
+    return {"id": ids[kind], "name": ids[kind].rsplit("/", 1)[-1], "sku": {"name": "basic"},
+            "properties": {"publicNetworkAccess": pna, "privateEndpointConnections": conns, **props}}
+
+
+def test_network_private_foundry_requires_private_search_storage_and_shared_links(monkeypatch, env):
+    shared = {"foundry": _svc(env, "foundry", "Disabled", 1, networkInjections=[{"scenario": "agent"}]),
+              "search": _svc(env, "search", "Disabled", 1),
+              "storage": _svc(env, "storage", "Enabled", 0, networkAcls={"defaultAction": "Deny", "bypass": "None"})}
+    links = [{"name": "spl-foundry", "properties": {"privateLinkResourceId": env.foundry_account_id.upper(),
+                                                     "status": "Approved"}}]
+    monkeypatch.setattr(preflight, "arm", lambda *a, **k: Mock(json=lambda: {"value": links}))
+    monkeypatch.setattr(preflight, "_resolve", lambda host: ["10.0.0.4"] if "search" in host else ["20.1.2.3"])
+    report = Report("now", 1)
+    preflight._network(report, env, shared)
+    checks = {c.id: c for c in report.checks}
+    assert checks["network.foundry"].status == PASS
+    assert checks["network.search"].status == PASS
+    assert checks["network.storage"].status == BLOCKED  # injected agents, storage without private endpoint
+    assert checks["network.search-foundry"].status == PASS
+    assert checks["network.search-storage"].status == BLOCKED
+    assert checks["network.client-search"].status == PASS
+    assert checks["network.client-foundry"].status == BLOCKED  # public IP while public access disabled
+    assert "client-storage" not in " ".join(checks)  # restricted without private endpoint: firewall decides
+
+
+def test_network_public_setup_passes_without_private_link_lookups(monkeypatch, env):
+    shared = {k: _svc(env, k) for k in ("foundry", "search", "storage")}
+    monkeypatch.setattr(preflight, "arm", Mock(side_effect=AssertionError("no lookups needed")))
+    monkeypatch.setattr(preflight, "_resolve", Mock(side_effect=AssertionError("no DNS needed")))
+    report = Report("now", 1)
+    preflight._network(report, env, shared)
+    assert {c.status for c in report.checks} == {PASS}
+
+
+def test_cross_service_identities_name_exact_role_principal_and_scope(monkeypatch, env):
+    shared = {"search": {"identity": {"principalId": "search-mi"}},
+              "project": {"identity": {"principalId": "project-mi"}},
+              "foundry": {"identity": {}}}
+    held = {("search-mi", env.resolved_storage_account_id()): ["Storage Blob Data Reader"],
+            ("project-mi", env.search_service_id): ["Search Index Data Reader"]}
+    monkeypatch.setattr(preflight, "role_assignments", lambda scope, pid: held.get((pid, scope), []))
+    monkeypatch.setattr("fomo.search.client.SearchClient", Mock(side_effect=WorkshopError("offline")))
+    report = Report("now", 1)
+    preflight._identities(report, env, shared)
+    checks = {c.id: c for c in report.checks}
+    assert checks["ident.search-storage"].status == PASS
+    assert checks["ident.project-search"].status == PASS
+    embed = checks["ident.search-foundry"]
+    assert embed.status == BLOCKED and embed.owner == "admin"
+    assert "Cognitive Services OpenAI User" in embed.fix and "search-mi" in embed.fix
+    assert env.foundry_account_id in embed.fix
+    assert checks["ident.project-search-service"].status == WARNING
+    assert checks["ident.account-search"].status == WARNING
+    assert "system-assigned" in checks["ident.account-search"].evidence
