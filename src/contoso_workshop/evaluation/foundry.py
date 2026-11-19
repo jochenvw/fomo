@@ -223,7 +223,7 @@ def start(project: Any, client: Any, env: Environment, names: ParticipantNames, 
     properties = {key: {"type": "string"} for key in
                   ("id", "query", "category", "ground_truth", "expected_behavior", "reference_context")}
     evaluation = client.evals.create(
-        name=f"Contoso Oil {names.hackername} Simple vs Smart RAG ({suite})",
+        name=f"FOMO {names.hackername} Simple vs Smart RAG ({suite})",
         data_source_config={"type": "custom", "item_schema": {
             "type": "object", "properties": properties, "required": list(properties),
         }, "include_sample_schema": True},
@@ -271,7 +271,7 @@ def collect(client: Any, env: Environment, state_path: Path, *, timeout: float =
         if all(r.get("output_file") for r in state["runs"].values()):
             break
         if time.monotonic() >= deadline:
-            raise Blocked(f"Foundry evaluation still running; resume with `contoso eval-foundry --resume {state_path}`")
+            raise Blocked(f"Foundry evaluation still running; resume with `fomo eval-foundry --resume {state_path}`")
         time.sleep(interval)
     report = comparison(state)
     report_path = state_path.parent / "comparison.json"

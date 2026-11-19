@@ -1,4 +1,4 @@
-# Goal: Contoso Oil AI Document Intelligence Hackathon
+# Goal: FOMO Metadata-Agent Hackathon for Contoso Oil
 
 > **Instruction to the implementing coding agent:** Build the *public GitHub repository* described here, including its skills, synthetic data, infrastructure-as-code, runnable software, tests, documentation, and facilitator tooling. **This `goal.md` is a specification, not the workshop skill itself.** Produce working code that the organizer can review and push to a public repo. Resolve implementation details using current official documentation, record decisions, and test the end-to-end path. Do not claim a capability works without validating it.
 
@@ -83,13 +83,13 @@ Use one unique, normalized hackername across the entire experience:
 | Smart RAG agent | `cosmic-wombat-smart-rag` | Foundry prompt agent, smart index |
 | Run/report folder | `.workshop/runs/cosmic-wombat/` | Gitignored, metadata and traces only |
 
-Azure resource naming rules differ across resource types; implement validated name derivation and collision detection. Keep a machine-readable per-participant manifest of **exact resource IDs, endpoint names, deployment names, model versions, indexer status, and ownership**. Never infer permission boundaries from hackernames; enforce isolation through actual RBAC and/or separate Azure resources. Tag eligible workshop-owned Azure resources with e.g. `workshop=contoso-oil` and `hackername`.
+Azure resource naming rules differ across resource types; implement validated name derivation and collision detection. Keep a machine-readable per-participant manifest of **exact resource IDs, endpoint names, deployment names, model versions, indexer status, and ownership**. Never infer permission boundaries from hackernames; enforce isolation through actual RBAC and/or separate Azure resources. Tag eligible workshop-owned Azure resources with e.g. `workshop=fomo` and `hackername`.
 
 ## 3. Three entry points: skills plus deterministic commands
 
 Prefer **three focused GitHub Copilot agent skills** (smaller context and clearer discoverability) backed by the *same deterministic Python scripts*. If one skill with three explicit operations is technically better after testing, document the reason; the three public operations must remain stable.
 
-Provide real `SKILL.md` files in `.github/skills/contoso-preflight/`, `.github/skills/contoso-provision/`, `.github/skills/contoso-cheatcode/`, with valid metadata and meaningful descriptions. Verify current GitHub Copilot CLI and VS Code skill support. Include documented natural-language invocations such as “Use /contoso-preflight to check my workshop environment.” Do not invent a supported `/command` syntax without verification.
+Provide real `SKILL.md` files in `.github/skills/fomo-preflight/`, `.github/skills/fomo-provision/`, `.github/skills/fomo-cheatcode/`, with valid metadata and meaningful descriptions. Verify current GitHub Copilot CLI and VS Code skill support. Include documented natural-language invocations such as “Use /fomo-preflight to check my workshop environment.” Do not invent a supported `/command` syntax without verification.
 
 **Essential:** the corresponding commands must also work **without Copilot** (`uv run ...`, or a clearly documented standalone bootstrap), so a failed Copilot installation cannot prevent the user from checking or repairing prerequisites. The Copilot skill is the friendly interface; it must never be the sole implementation of infrastructure operations.
 
@@ -278,9 +278,9 @@ CONTRIBUTING.md
 goal.md
 .github/
   skills/
-    contoso-preflight/SKILL.md
-    contoso-provision/SKILL.md
-    contoso-cheatcode/SKILL.md
+    fomo-preflight/SKILL.md
+    fomo-provision/SKILL.md
+    fomo-cheatcode/SKILL.md
   workflows/ci.yml
 infra/
   main.bicep

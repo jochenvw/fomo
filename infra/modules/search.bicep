@@ -1,5 +1,5 @@
 // Azure AI Search service. SKU is chosen by the caller from the capacity calculation
-// (`uv run contoso capacity`), never silently upgraded.
+// (`uv run fomo capacity`), never silently upgraded.
 
 param searchServiceName string
 param location string

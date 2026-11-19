@@ -102,16 +102,89 @@ def test_azure_tenant_checked_before_incomplete_environment(monkeypatch, env, ma
     account = {"id": env.subscription_id, "tenantId": env.tenant_id if matching else "other-tenant",
                "state": "Enabled"}
     az = Mock(return_value=account)
+    arm = Mock(return_value=Mock(status_code=200))
     monkeypatch.setattr(preflight, "az", az)
+    monkeypatch.setattr(preflight, "arm", arm)
     report = Report("now", 1)
     preflight.azure_checks(report, env, participant=None, smoke=False)
     checks = {c.id: c for c in report.checks}
     assert checks["azure.tenant"].status == (PASS if matching else BLOCKED)
     assert ("azure.environment" in checks) is matching
-    assert "azure.target" not in checks
+    assert ("azure.target" in checks) is matching
     if not matching:
         assert f"az login --tenant {env.tenant_id}" in checks["azure.tenant"].fix
     assert az.call_count == 1
+    assert arm.call_count == int(matching)
+
+
+@pytest.mark.parametrize("incomplete", [False, True])
+def test_missing_saved_group_offers_recovery_before_service_checks(monkeypatch, env, incomplete):
+    if incomplete:
+        env.foundry_account_name = ""
+    monkeypatch.setattr(preflight, "az", lambda *args: {
+        "id": env.subscription_id, "tenantId": env.tenant_id, "state": "Enabled"})
+    arm = Mock(return_value=Mock(status_code=404))
+    monkeypatch.setattr(preflight, "arm", arm)
+    providers = Mock()
+    monkeypatch.setattr(preflight, "_providers", providers)
+    report = Report("now", 1)
+    preflight.azure_checks(report, env, participant="cosmic-wombat", smoke=False)
+    group = report.checks[-1]
+    assert group.id == "azure.resource-group"
+    assert group.status == BLOCKED and group.data["missing"] is True
+    assert group.data["recovery_options"] == ["recreate", "select-existing", "create-new", "defer"]
+    assert env.resource_group in group.evidence
+    assert "--create-resource-group --location <region> --plan" in group.fix
+    assert "does not restore" in group.fix
+    arm.assert_called_once_with(
+        "GET", f"/subscriptions/{env.subscription_id}/resourceGroups/{env.resource_group}",
+        "2021-04-01", ok=(200, 404))
+    providers.assert_not_called()
+    assert report.verdict == BLOCKED
+
+
+@pytest.mark.parametrize("error", [
+    PermissionDenied("HTTP 403: access denied", owner="facilitator"),
+    WorkshopError("Connection interrupted"),
+])
+def test_unverifiable_group_is_not_reported_missing(monkeypatch, env, error):
+    monkeypatch.setattr(preflight, "az", lambda *args: {
+        "id": env.subscription_id, "tenantId": env.tenant_id, "state": "Enabled"})
+    monkeypatch.setattr(preflight, "arm", Mock(side_effect=error))
+    report = Report("now", 1)
+    preflight.azure_checks(report, env, participant=None, smoke=False)
+    check = report.checks[-1]
+    assert check.id == "azure.resource-group" and check.status == BLOCKED
+    assert check.data["missing"] is None
+    assert "recovery_options" not in check.data
+    assert "existence is unknown" in check.fix
+    assert "--create-resource-group" not in check.fix
+    assert str(error) in check.evidence
+
+
+def test_subscription_drift_stops_group_discovery_even_with_incomplete_config(monkeypatch, env):
+    env.foundry_account_name = ""
+    monkeypatch.setattr(preflight, "az", lambda *args: {
+        "id": "wrong-sub", "tenantId": env.tenant_id, "state": "Enabled"})
+    arm = Mock()
+    monkeypatch.setattr(preflight, "arm", arm)
+    report = Report("now", 1)
+    preflight.azure_checks(report, env, participant=None, smoke=False)
+    assert report.checks[-1].id == "azure.target"
+    assert report.checks[-1].status == BLOCKED
+    arm.assert_not_called()
+
+
+def test_login_probe_preserves_connectivity_error_instead_of_claiming_signed_out(monkeypatch, env):
+    monkeypatch.setattr(preflight, "az", Mock(side_effect=WorkshopError(
+        "connection interrupted after 3 attempt(s)", fix="check VPN/proxy, then retry")))
+    report = Report("now", 1)
+    preflight.azure_checks(report, env, participant=None, smoke=False)
+    assert len(report.checks) == 1
+    assert report.checks[0].status == BLOCKED
+    assert "connection interrupted" in report.checks[0].evidence
+    assert "not signed in" not in report.checks[0].evidence
+    assert "VPN/proxy" in report.checks[0].fix
 
 
 @pytest.mark.parametrize("allowed", [True, False, None])
@@ -144,7 +217,7 @@ def test_missing_resource_creation_readiness(monkeypatch, env, names, resource, 
     if allowed:
         assert "subject to approval" in checks[cid].fix
         assert "--plan" in checks[cid].fix
-        assert ("contoso provision" in checks[cid].fix) == (
+        assert ("fomo provision" in checks[cid].fix) == (
             resource in ("container", "cosmic-wombat-raw"))
     elif allowed is False:
         assert "provision this resource for you" in checks[cid].fix

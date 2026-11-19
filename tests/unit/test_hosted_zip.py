@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 import io
+import runpy
+import sys
 import zipfile
+from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 import yaml
 
 from contoso_workshop import rbac
-from contoso_workshop.agents.hosted import build_zip, environment_variables, required_grants
+from contoso_workshop.agents.hosted import APP_DIR, build_zip, environment_variables, required_grants
 from contoso_workshop.decision.config import REFERENCE_CONFIG
 from contoso_workshop.errors import ConfigError
 
@@ -71,5 +75,30 @@ def test_grant_assignment_name_is_deterministic(env):
 
 def test_environment_variables_pin_one_container(env, names):
     ev = environment_variables(env, names)
-    assert ev["CONTOSO_CONTAINER"] == "cosmic-wombat-inbox"
-    assert ev["CONTOSO_DECISION_ENDPOINT"] == "https://contoso-foundry.openai.azure.com"
+    assert ev["FOMO_CONTAINER"] == "cosmic-wombat-inbox"
+    assert ev["FOMO_DECISION_ENDPOINT"] == "https://contoso-foundry.openai.azure.com"
+
+
+@pytest.mark.parametrize("prefix", ["FOMO", "CONTOSO", "both"])
+def test_hosted_entrypoint_accepts_new_and_legacy_environment(monkeypatch, env, names, prefix):
+    variables = {key.removeprefix("FOMO_"): value for key, value in environment_variables(env, names).items()
+                 if key.startswith("FOMO_")}
+    for key, value in variables.items():
+        for namespace in ("FOMO", "CONTOSO"):
+            monkeypatch.delenv(f"{namespace}_{key}", raising=False)
+        if prefix == "both":
+            monkeypatch.setenv(f"CONTOSO_{key}", "old-target")
+            monkeypatch.setenv(f"FOMO_{key}", value)
+        else:
+            monkeypatch.setenv(f"{prefix}_{key}", value)
+    host = Mock()
+    host.invoke_handler.side_effect = lambda handler: handler
+    monkeypatch.setitem(sys.modules, "azure.ai.agentserver.invocations",
+                        SimpleNamespace(InvocationAgentServerHost=lambda: host))
+    monkeypatch.setitem(sys.modules, "starlette.requests", SimpleNamespace(Request=object))
+    monkeypatch.setitem(sys.modules, "starlette.responses", SimpleNamespace(JSONResponse=Mock(), Response=object))
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    module = runpy.run_path(str(APP_DIR / "main.py"))
+    assert module["PARTICIPANT"] == names.hackername
+    assert module["CONTAINER"] == names.container
+    assert module["DECISION_ENDPOINT"] == env.resolved_decision_endpoint()

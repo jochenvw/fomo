@@ -44,8 +44,8 @@ resource project 'Microsoft.CognitiveServices/accounts/projects@2025-06-01' = {
     type: 'SystemAssigned'
   }
   properties: {
-    displayName: 'Contoso Oil Document Intelligence'
-    description: 'Workshop project: Simple RAG vs Metadata Miner vs Smart RAG.'
+    displayName: 'FOMO - Metadata Agents'
+    description: 'Foundry Organizes Metadata. Occasionally. Simple RAG vs Metadata Miner vs Smart RAG for Contoso Oil.'
   }
 }
 

@@ -78,11 +78,11 @@ def build_zip(classifier_yaml: Path | None = None) -> tuple[bytes, str]:
 
 def environment_variables(env: Environment, names: ParticipantNames) -> dict[str, str]:
     return {
-        "CONTOSO_PARTICIPANT": names.hackername,
-        "CONTOSO_CONTAINER": names.container,
-        "CONTOSO_BLOB_ENDPOINT": env.resolved_blob_endpoint(),
-        "CONTOSO_DECISION_ENDPOINT": env.resolved_decision_endpoint(),
-        "CONTOSO_DECISION_DEPLOYMENT": env.decision_deployment,
+        "FOMO_PARTICIPANT": names.hackername,
+        "FOMO_CONTAINER": names.container,
+        "FOMO_BLOB_ENDPOINT": env.resolved_blob_endpoint(),
+        "FOMO_DECISION_ENDPOINT": env.resolved_decision_endpoint(),
+        "FOMO_DECISION_DEPLOYMENT": env.decision_deployment,
         "PYTHONNOUSERSITE": "1",
     }
 
@@ -169,14 +169,14 @@ class HostedMiner:
                 agent_name=self.name, definition=self.definition(),
                 code=(f"{self.name}.zip", data, "application/zip"),  # type: ignore[arg-type] # multipart tuple, verified live
                 code_zip_sha256=sha,
-                description=(f"contoso-oil Metadata Miner for {self.names.hackername} "
+                description=(f"FOMO Metadata Miner for {self.names.hackername} "
                              f"(container {self.names.container})"),
-                metadata={"workshop": "contoso-oil", "participant": self.names.hackername,
+                metadata={"workshop": "fomo", "participant": self.names.hackername,
                           "container": self.names.container, "code_sha256": sha[:32]},
             )
         except Exception as exc:
             raise AgentError(f"hosted agent deploy failed: {exc}"[:900],
-                             fix="check `contoso preflight` (Foundry User on the project; hosted agents "
+                             fix="check `fomo preflight` (Foundry User on the project; hosted agents "
                              "available in this region)", owner="facilitator") from exc
         version = str(created.version)
         log(f"deployed {self.name} v{version} (zip sha256 {sha[:12]}); waiting for active")
@@ -193,7 +193,7 @@ class HostedMiner:
             status = new
         if status == "failed":
             raise AgentError(f"{self.name} v{version} provisioning failed: {_get(details, 'error')}"[:900],
-                             fix="see docs/troubleshooting.md#hosted-agent; `contoso miner run --local` is a "
+                             fix="see docs/troubleshooting.md#hosted-agent; `fomo miner run --local` is a "
                              "labeled fallback that does NOT meet the hosted requirement")
         ident = _get(details, "instance_identity")
         principal = _get(ident, "principal_id") if ident is not None else None

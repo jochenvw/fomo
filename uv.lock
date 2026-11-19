@@ -482,64 +482,6 @@ wheels = [
 ]
 
 [[package]]
-name = "contoso-workshop"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "azure-ai-projects" },
-    { name = "azure-identity" },
-    { name = "azure-mgmt-authorization" },
-    { name = "azure-search-documents" },
-    { name = "azure-storage-blob" },
-    { name = "pypdf" },
-    { name = "python-pptx" },
-    { name = "pyyaml" },
-    { name = "requests" },
-]
-
-[package.optional-dependencies]
-corpus = [
-    { name = "reportlab" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "bandit" },
-    { name = "mypy" },
-    { name = "pytest" },
-    { name = "reportlab" },
-    { name = "ruff" },
-    { name = "types-pyyaml" },
-    { name = "types-requests" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "azure-ai-projects", specifier = ">=2.1.0" },
-    { name = "azure-identity", specifier = ">=1.27.0" },
-    { name = "azure-mgmt-authorization", specifier = ">=4.0.0" },
-    { name = "azure-search-documents", specifier = ">=11.6.0" },
-    { name = "azure-storage-blob", specifier = ">=12.31.1" },
-    { name = "pypdf", specifier = ">=5.0" },
-    { name = "python-pptx", specifier = ">=1.0.2" },
-    { name = "pyyaml", specifier = ">=6.0" },
-    { name = "reportlab", marker = "extra == 'corpus'", specifier = ">=4.2" },
-    { name = "requests", specifier = ">=2.32" },
-]
-provides-extras = ["corpus"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "bandit", specifier = ">=1.8" },
-    { name = "mypy", specifier = ">=1.13" },
-    { name = "pytest", specifier = ">=8.3" },
-    { name = "reportlab", specifier = ">=4.2" },
-    { name = "ruff", specifier = ">=0.8" },
-    { name = "types-pyyaml" },
-    { name = "types-requests" },
-]
-
-[[package]]
 name = "cryptography"
 version = "50.0.2"
 source = { registry = "https://packagefeedproxy.microsoft.io/pypi/simple/" }
@@ -606,6 +548,64 @@ wheels = [
     { url = "https://ms-feed-25.pkgs.visualstudio.com/6f084628-a36d-42cb-934d-057357e379dc/_packaging/49d7402f-07bb-4b18-a9ce-086e6e98a554/pypi/download/cryptography/50.0.2/cryptography-50.0.2-pp311-pypy311_pp73-manylinux_2_34_x86_64.whl", hash = "sha256:1ba34f04897fcdaa73f74145c25f3ec146fbd56593853e88adc2e811303c5f42", size = 4726322, upload-time = "2026-10-08T13:36:31Z" },
     { url = "https://ms-feed-25.pkgs.visualstudio.com/6f084628-a36d-42cb-934d-057357e379dc/_packaging/49d7402f-07bb-4b18-a9ce-086e6e98a554/pypi/download/cryptography/50.0.2/cryptography-50.0.2-pp311-pypy311_pp80-macosx_11_0_arm64.whl", hash = "sha256:3dc4fd8058cea1644971207d530e1a03a184a805ffc8ebdddf0599d78a331b81", size = 3873097, upload-time = "2026-10-08T13:35:55Z" },
     { url = "https://ms-feed-25.pkgs.visualstudio.com/6f084628-a36d-42cb-934d-057357e379dc/_packaging/49d7402f-07bb-4b18-a9ce-086e6e98a554/pypi/download/cryptography/50.0.2/cryptography-50.0.2-pp311-pypy311_pp80-win_amd64.whl", hash = "sha256:7b75de3c8b3be1cdb1052747c929440c3eea46c1bc2cb8a6e3a48388e9b7b452", size = 3805376, upload-time = "2026-10-08T13:36:04Z" },
+]
+
+[[package]]
+name = "fomo-workshop"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "azure-ai-projects" },
+    { name = "azure-identity" },
+    { name = "azure-mgmt-authorization" },
+    { name = "azure-search-documents" },
+    { name = "azure-storage-blob" },
+    { name = "pypdf" },
+    { name = "python-pptx" },
+    { name = "pyyaml" },
+    { name = "requests" },
+]
+
+[package.optional-dependencies]
+corpus = [
+    { name = "reportlab" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "bandit" },
+    { name = "mypy" },
+    { name = "pytest" },
+    { name = "reportlab" },
+    { name = "ruff" },
+    { name = "types-pyyaml" },
+    { name = "types-requests" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "azure-ai-projects", specifier = ">=2.1.0" },
+    { name = "azure-identity", specifier = ">=1.27.0" },
+    { name = "azure-mgmt-authorization", specifier = ">=4.0.0" },
+    { name = "azure-search-documents", specifier = ">=11.6.0" },
+    { name = "azure-storage-blob", specifier = ">=12.31.1" },
+    { name = "pypdf", specifier = ">=5.0" },
+    { name = "python-pptx", specifier = ">=1.0.2" },
+    { name = "pyyaml", specifier = ">=6.0" },
+    { name = "reportlab", marker = "extra == 'corpus'", specifier = ">=4.2" },
+    { name = "requests", specifier = ">=2.32" },
+]
+provides-extras = ["corpus"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "bandit", specifier = ">=1.8" },
+    { name = "mypy", specifier = ">=1.13" },
+    { name = "pytest", specifier = ">=8.3" },
+    { name = "reportlab", specifier = ">=4.2" },
+    { name = "ruff", specifier = ">=0.8" },
+    { name = "types-pyyaml" },
+    { name = "types-requests" },
 ]
 
 [[package]]
@@ -1171,7 +1171,7 @@ dependencies = [
     { name = "sniffio" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://ms-feed-25.pkgs.visualstudio.com/6f084628-a36d-42cb-934d-057357e379dc/_packaging/49d7402f-07bb-4b18-a9ce-086e6e98a554/pypi/download/openai/3.49/openai-3.49.0.tar.gz", hash = "sha256:44badf2bea9bcd643dafa0bc4d5a109a14395889219fd68b8560322288196e96", size = 2410883, upload-time = "2026-11-10T06:47:55Z" }
+sdist = { url = "https://ms-feed-25.pkgs.visualstudio.com/6f084628-a36d-42cb-934d-057357e379dc/_packaging/49d7402f-07bb-4b18-a9ce-086e6e98a554/pypi/download/openai/3.49/openai-3.49.0.tar.gz", hash = "sha256:44badf2bea9bcd643dafa0bc4d5a109a14395889219fd68b8560322288196e96", size = 2410883, upload-time = "2026-11-17T12:48:13Z" }
 wheels = [
     { url = "https://ms-feed-25.pkgs.visualstudio.com/6f084628-a36d-42cb-934d-057357e379dc/_packaging/49d7402f-07bb-4b18-a9ce-086e6e98a554/pypi/download/openai/3.49/openai-3.49.0-py3-none-any.whl", hash = "sha256:3977754792115027ba80ae16996ba3366478b5b228e1ab58e2660bd7ac8c3d78", size = 2442112, upload-time = "2026-11-17T06:47:55Z" },
 ]

@@ -15,7 +15,7 @@ Run PowerShell from the repository root:
 
 ```powershell
 $participant = "cosmic-wombat"
-uv run contoso status --participant $participant
+uv run fomo status --participant $participant
 ```
 
 Confirm both indexes contain 25 documents, the smart index has six `contract` documents,
@@ -33,8 +33,8 @@ Ask RAW first, then SMART. Keep the question identical:
 $participant = "cosmic-wombat"
 $question = "What payment terms apply under our supplier contracts?"
 
-uv run contoso agents ask simple $question --participant $participant
-uv run contoso agents ask smart  $question --participant $participant
+uv run fomo agents ask simple $question --participant $participant
+uv run fomo agents ask smart  $question --participant $participant
 ```
 
 **Presenter:** "We need the terms in our supplier agreements. A procurement default and a
@@ -68,7 +68,7 @@ evaluation judge. Search query vectorization still uses the embedding deployment
 
 ```powershell
 $participant = "cosmic-wombat"
-$report = uv run contoso eval --participant $participant --queries q01 --k 5 --agents none --output json |
+$report = uv run fomo eval --participant $participant --queries q01 --k 5 --agents none --output json |
     ConvertFrom-Json
 if ($LASTEXITCODE -ne 0) { throw "Retrieval comparison failed; inspect the CLI error." }
 
@@ -110,8 +110,8 @@ calls; investigate a materially different unfiltered control before attributing 
 $participant = "cosmic-wombat"
 $question = "Which supplier agreements offer a discount for early payment?"
 
-uv run contoso agents ask simple $question --participant $participant
-uv run contoso agents ask smart  $question --participant $participant
+uv run fomo agents ask simple $question --participant $participant
+uv run fomo agents ask smart  $question --participant $participant
 ```
 
 Look for **Master Purchase Terms for Drilling Consumables**, doc-009: **2% within 10 days**.

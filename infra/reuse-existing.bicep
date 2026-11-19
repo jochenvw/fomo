@@ -17,7 +17,7 @@ param searchServiceName string
 param searchResourceGroup string = resourceGroup().name
 param searchSubscriptionId string = subscription().subscriptionId
 
-param searchConnectionName string = 'contoso-search'
+param searchConnectionName string = 'fomo-search'
 
 @description('Model deployments to create if the facilitator lacks them; [] = assume they exist (verified by preflight).')
 param createModelDeployments array = []

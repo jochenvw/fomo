@@ -195,7 +195,7 @@ def local_checks(report: Report) -> None:
     rc, out = _run("copilot", "--version")
     report.add("local.copilot", cat, "GitHub Copilot CLI (optional front end)", PASS if rc == 0 else WARNING,
                (f"copilot {_version(out)}; sign-in state is checked by copilot itself (/login)" if rc == 0
-                else "copilot not found; every operation also runs as `uv run contoso ...`"),
+                else "copilot not found; every operation also runs as `uv run fomo ...`"),
                "" if rc == 0 else "install: `npm install -g @github/copilot` (Node 22+) or use Copilot in VS Code "
                "agent mode; see docs/prerequisites.md", required=False)
     skills = sorted(REPO_ROOT.glob(".github/skills/*/SKILL.md"))
@@ -220,7 +220,13 @@ def _skill_ok(path: Path) -> bool:
 
 # ---- azure -----------------------------------------------------------------------------------
 def azure_checks(report: Report, env: Environment, *, participant: str | None, smoke: bool) -> None:
-    acct = az("account", "show", check=False)
+    try:
+        acct = az("account", "show")
+    except WorkshopError as exc:
+        report.add("azure.login", "azure-context", "Azure CLI sign-in", BLOCKED, str(exc)[:500],
+                   exc.fix or "verify Azure connectivity; if the session expired, run `az login`, then retry",
+                   owner=exc.owner)
+        return
     if not acct:
         report.add("azure.login", "azure-context", "Azure CLI sign-in", BLOCKED, "not signed in",
                    "`az login` then `az account set -s <subscription>`")
@@ -242,18 +248,48 @@ def azure_checks(report: Report, env: Environment, *, participant: str | None, s
     report.add("azure.subscription", "azure-context", "Subscription", PASS if sub_ok else BLOCKED,
                f"{acct.get('name')} ({acct.get('id')}) state={acct.get('state')}",
                "" if sub_ok else "use an enabled subscription", owner="admin")
+    if not sub_ok:
+        return
+    if env.subscription_id:
+        match = acct.get("id") == env.subscription_id
+        report.add("azure.target", "azure-context", "CLI subscription == workshop subscription",
+                   PASS if match else BLOCKED,
+                   f"az: {acct.get('id')}; workshop: {env.subscription_id}, RG {env.resource_group}",
+                   "" if match else f"`az account set -s {env.subscription_id}`")
+        if not match:
+            return
+    if env.subscription_id and env.resource_group:
+        group_exists = None
+
+        def group_probe() -> tuple[str, str]:
+            nonlocal group_exists
+            rg = f"/subscriptions/{env.subscription_id}/resourceGroups/{env.resource_group}"
+            response = arm("GET", rg, "2021-04-01", ok=(200, 404))
+            group_exists = response.status_code == 200
+            return ((PASS, f"{env.resource_group} exists in the configured subscription") if group_exists else
+                    (BLOCKED, f"saved resource group {env.resource_group} was not found (HTTP 404)"))
+
+        check = _probe(report, "azure.resource-group", "azure-context", "Remembered resource group", group_probe,
+                       fix="group existence is unknown; verify connectivity and access to the confirmed subscription "
+                       "and group, then rerun; do not recreate on a permission or connection error")
+        check.data["missing"] = None if group_exists is None else not group_exists
+        if group_exists is False:
+            check.fix = (
+                "confirm tenant/subscription first; choose to recreate this empty group, select an existing group, "
+                "create a different group, or defer to the facilitator. Review "
+                f"`uv run fomo env select --tenant {env.tenant_id or acct.get('tenantId') or '<tenant-id>'} "
+                f"--subscription {env.subscription_id} --resource-group {env.resource_group} "
+                "--create-resource-group --location <region> --plan`; obtain approval before --apply. "
+                "Recreating the group does not restore its former services or data"
+            )
+            check.data["recovery_options"] = ["recreate", "select-existing", "create-new", "defer"]
+        if check.status != PASS:
+            return
     missing = env.missing()
     if missing:
         report.add("azure.environment", "azure-context", "Workshop environment", BLOCKED,
                    f"missing: {', '.join(missing)}",
-                   "`uv run contoso env pull --resource-group <rg>` (facilitator shares the RG name)")
-        return
-    match = acct.get("id") == env.subscription_id
-    report.add("azure.target", "azure-context", "CLI subscription == workshop subscription",
-               PASS if match else BLOCKED,
-               f"az: {acct.get('id')}; workshop: {env.subscription_id}, RG {env.resource_group}",
-               "" if match else f"`az account set -s {env.subscription_id}`")
-    if not match:
+                   "`uv run fomo env pull --resource-group <rg>` (facilitator shares the RG name)")
         return
     sub = f"/subscriptions/{env.subscription_id}"
     rg = f"{sub}/resourceGroups/{env.resource_group}"
@@ -276,7 +312,7 @@ def azure_checks(report: Report, env: Environment, *, participant: str | None, s
         _smoke(report, env)
     else:
         report.add("smoke.models", "models", "Live model calls (chat, embedding, decision)", SKIPPED,
-                   "opt-in: `contoso preflight --smoke` makes 3 tiny paid calls (< $0.001)", required=False)
+                   "opt-in: `fomo preflight --smoke` makes 3 tiny paid calls (< $0.001)", required=False)
 
 
 def _signed_in_object_id() -> str | None:
@@ -322,7 +358,7 @@ def _resources(report: Report, env: Environment, rg: str) -> dict[str, Any]:
                                            f"publicNetworkAccess={props.get('publicNetworkAccess')}"
                                            + (f", networkInjections={len(inj)} entr(y/ies)" if inj else ""))
     _probe(report, "resources.foundry", "resources", "Foundry account (new resource model, no hub)", foundry,
-           fix="facilitator: `contoso infra deploy --plan`", owner="facilitator")
+           fix="facilitator: `fomo infra deploy --plan`", owner="facilitator")
 
     def project() -> tuple[str, str]:
         p = get(f"{env.foundry_account_id}/projects/{env.project_name}", "2025-06-01")
@@ -375,7 +411,7 @@ def _models(report: Report, env: Environment) -> None:
         if d is None:
             report.add(f"models.{role}", "models", f"{role} deployment '{name}'", BLOCKED,
                        f"not found; deployments: {', '.join(by_name) or 'none'}",
-                       "facilitator: `contoso infra deploy --plan` (models are deployed ahead of the workshop)",
+                       "facilitator: `fomo infra deploy --plan` (models are deployed ahead of the workshop)",
                        owner="facilitator", data={"missing": True})
             continue
         model = d["properties"]["model"]
@@ -505,9 +541,9 @@ def _creation_checks(report: Report, env: Environment, rg: str, shared: dict[str
         perms = read(scope)
         allowed = effective(perms, action) if perms is not None else None
         owner = "participant" if allowed else "facilitator"
-        plan = (f"uv run contoso provision --participant {participant} --no-smoke --plan"
+        plan = (f"uv run fomo provision --participant {participant} --no-smoke --plan"
                 if participant and (key == "container" or key.startswith(f"{participant}-"))
-                else "uv run contoso infra deploy --parameters <file>.bicepparam --plan")
+                else "uv run fomo infra deploy --parameters <file>.bicepparam --plan")
         if allowed:
             fix = (f"missing, self-provisionable subject to approval: review `{plan}`; obtain explicit approval "
                    "before applying. Full-template permissions, service identities, policy and quota must also pass")
@@ -588,7 +624,7 @@ def _control_plane(report: Report, env: Environment, rg: str, shared: dict[str, 
                   "principals)" if conditional else "")
                + "; Contributor alone cannot assign roles",
                "" if grant_st and grant_fa else "facilitator: add your object id to `participants` in the Bicep "
-               "parameters (constrained RBAC Administrator) or have an Owner run `contoso miner deploy`",
+               "parameters (constrained RBAC Administrator) or have an Owner run `fomo miner deploy`",
                owner="facilitator")
     checks = (
         ("rbac.blob-read", "blob read", st_perms,
@@ -706,7 +742,7 @@ def _identities(report: Report, env: Environment, shared: dict[str, Any]) -> Non
             if last.get("status") == "success" and int(last.get("itemsProcessed") or 0) >= 0:
                 return PASS, (f"indexer {name} last run succeeded: proves Search -> Blob and Search -> embedding "
                               "end to end")
-        return INFO, "no successful participant indexer yet; `contoso provision` proves both arrows live"
+        return INFO, "no successful participant indexer yet; `fomo provision` proves both arrows live"
     _probe(report, "ident.functional", cat, "Search -> Blob -> embeddings (functional evidence)", functional,
            required=False)
 
@@ -730,7 +766,7 @@ def _capacity(report: Report, env: Environment) -> None:
         report.capacity = rep.to_dict()
         return status, evidence
     _probe(report, "capacity.search", "capacity", f"Search object capacity for {report.participants} participants",
-           fn, fix="facilitator: `contoso capacity --participants N` and pick the SKU it recommends",
+           fn, fix="facilitator: `fomo capacity --participants N` and pick the SKU it recommends",
            owner="facilitator")
     model_caps = {c.id: c.data.get("capacity") for c in report.checks if c.id.startswith("models.")}
     chat_cap = model_caps.get("models.chat")

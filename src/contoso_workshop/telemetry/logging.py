@@ -98,7 +98,7 @@ class RunLogger:
         self.operation = operation
         self.participant = participant
         self.quiet = quiet
-        self._logger = logging.getLogger(f"contoso.{operation}.{self.run_id}")
+        self._logger = logging.getLogger(f"fomo.{operation}.{self.run_id}")
         self._logger.setLevel(logging.DEBUG)
         self._logger.propagate = False
         self._console: logging.StreamHandler[Any] | None = None

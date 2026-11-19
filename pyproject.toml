@@ -1,7 +1,7 @@
 [project]
-name = "contoso-workshop"
+name = "fomo-workshop"
 version = "0.1.0"
-description = "Contoso Oil Document Intelligence workshop: Simple RAG vs Metadata Miner (Microsoft-Decision-1) vs Smart RAG on Microsoft Foundry + Azure AI Search."
+description = "FOMO: Foundry Organizes Metadata. Occasionally. An experimental metadata-agent workshop using Contoso Oil demo documents."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"
@@ -21,6 +21,7 @@ dependencies = [
 corpus = ["reportlab>=4.2"]
 
 [project.scripts]
+fomo = "contoso_workshop.cli:main"
 contoso = "contoso_workshop.cli:main"
 
 [dependency-groups]
@@ -63,7 +64,7 @@ files = ["src/contoso_workshop"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [
-    "integration: needs live Azure credentials and CONTOSO_* environment (opt-in)",
+    "integration: needs live Azure credentials and FOMO_* environment (opt-in; CONTOSO_* supported)",
     "e2e: full live end-to-end run (opt-in, incurs cost)",
 ]
 addopts = "-m 'not integration and not e2e'"

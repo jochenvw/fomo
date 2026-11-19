@@ -10,24 +10,41 @@ hackername after the first `--participant`.
 git clone <this repo>; cd <repo>
 uv sync
 az login                      # pick the workshop subscription
-uv run contoso env pull --subscription <sub-id> --resource-group <rg>   # or copy .workshop/environment.json from the facilitator
-uv run contoso preflight --local-only
+uv run fomo env pull --subscription <sub-id> --resource-group <rg>   # or copy .workshop/environment.json from the facilitator
+uv run fomo preflight --local-only
 ```
 
-With Copilot CLI: `copilot`, then *"Use the /contoso-preflight skill"*.
-The skill asks you to confirm your Azure directory (tenant), then subscription, then resource
-group before checking Azure readiness. It remembers the confirmed target locally in the
+With Copilot CLI: `copilot`, then *"Use the /fomo-preflight skill"*.
+The skill first checks Azure CLI sign-in and shows the signed-in username, then asks you to
+confirm your Azure directory (tenant), subscription and resource group in order before
+checking Azure readiness. It remembers the confirmed target locally in the
 gitignored `.workshop/environment.json` for the workshop and verifies it on later calls.
-If the CLI context or configured target changes, it asks again; confirmation does not approve
+It checks sign-in and shows the current username on every call. If the CLI context or configured
+target changes, it asks again; confirmation does not approve
 provisioning. Missing environment configuration means Azure readiness has not yet been assessed,
 not that the Azure resources are necessarily absent.
+
+At the resource-group step, choose an **existing group** or **create a new empty group**.
+Suggested new names: `rg-fomo-<event>` for a shared group or `rg-fomo-<hackername>` for your own.
+Both choices are saved before workshop services need to exist. Without Copilot, preview with:
+
+```powershell
+uv run fomo env select --tenant <tenant-id> --subscription <sub-id> --resource-group <rg> --plan
+# For a new empty group, add: --create-resource-group --location <region>
+```
+
+After reviewing, rerun with `--apply` instead of `--plan` and confirm. Existing groups are not
+modified; new groups require a separate creation approval and have no charge themselves.
+This does not deploy workshop services or grant roles. A new empty group remains blocked for
+the workshop until the facilitator/admin provisions the infrastructure; skip `env pull`
+until a workshop deployment exists.
 
 ## 1. Baseline: Simple RAG (10 min)
 
 ```powershell
-uv run contoso provision --participant cosmic-wombat          # read the plan
-uv run contoso provision --participant cosmic-wombat --apply
-uv run contoso agents ask simple "What payment terms apply under our supplier contracts?"
+uv run fomo provision --participant cosmic-wombat          # read the plan
+uv run fomo provision --participant cosmic-wombat --apply
+uv run fomo agents ask simple "What payment terms apply under our supplier contracts?"
 ```
 
 Creates: container `cosmic-wombat-inbox` with 25 documents, index `cosmic-wombat-raw`,
@@ -56,8 +73,8 @@ uv run python .workshop/runs/cosmic-wombat/miner/try_classifier.py doc-003 doc-0
 Deploy and run it **as a hosted Foundry agent**:
 
 ```powershell
-uv run contoso miner deploy --classifier .workshop/runs/cosmic-wombat/miner/classifier.yaml --apply   # ~60-70 s
-uv run contoso miner run --hosted --apply                                                           # ~60-90 s
+uv run fomo miner deploy --classifier .workshop/runs/cosmic-wombat/miner/classifier.yaml --apply   # ~60-70 s
+uv run fomo miner run --hosted --apply                                                           # ~60-90 s
 ```
 
 The first run may wait 1-2 minutes for fresh role assignments; the CLI retries automatically.
@@ -66,8 +83,8 @@ Re-running only classifies changed blobs or a new `version`.
 ## 3. Smart RAG (10 min)
 
 ```powershell
-uv run contoso smart --apply
-uv run contoso agents ask smart "What payment terms apply under our supplier contracts?"
+uv run fomo smart --apply
+uv run fomo agents ask smart "What payment terms apply under our supplier contracts?"
 ```
 
 Creates index `cosmic-wombat-smart` (with `document_type`) and agent `cosmic-wombat-smart-rag`
@@ -76,7 +93,7 @@ filtered on `document_type eq 'contract'`.
 ## 4. Compare (10 min)
 
 ```powershell
-uv run contoso eval
+uv run fomo eval
 ```
 
 Reference run (see [`examples/sample-evaluation.md`](../examples/sample-evaluation.md)):
@@ -94,9 +111,9 @@ The `smart_desired` row (per-question filter) shows what intent-aware filtering 
 For scored answer quality in the Foundry portal (not just direct Search retrieval), use:
 
 ```powershell
-uv run contoso eval-foundry --participant cosmic-wombat --suite smoke --plan
-uv run contoso eval-foundry --participant cosmic-wombat --suite smoke --apply
-uv run contoso eval-foundry --participant cosmic-wombat --suite full --apply
+uv run fomo eval-foundry --participant cosmic-wombat --suite smoke --plan
+uv run fomo eval-foundry --participant cosmic-wombat --suite smoke --apply
+uv run fomo eval-foundry --participant cosmic-wombat --suite full --apply
 ```
 
 Replace `cosmic-wombat` with your participant name. The default is a four-question smoke
@@ -120,7 +137,7 @@ as statistical proof or hide non-contract regressions from the fixed contract fi
 To resume polling/downloading without submitting new paid runs:
 
 ```powershell
-uv run contoso eval-foundry --resume .foundry\results\workshop\<eval-id>\manifest.json
+uv run fomo eval-foundry --resume .foundry\results\workshop\<eval-id>\manifest.json
 ```
 
 ### Rigorous comparison (facilitator / after the workshop)
@@ -133,21 +150,21 @@ paired bootstrap confidence intervals. Rules are fixed in
 [evaluation-protocol.md](evaluation-protocol.md).
 
 ```powershell
-uv run contoso eval-ladder --participant cosmic-wombat --split dev  --repeats 1           # plan
-uv run contoso eval-ladder --participant cosmic-wombat --split dev  --repeats 1 --apply   # pipeline check
-uv run contoso eval-ladder --participant cosmic-wombat --split test --repeats 3 --apply   # headline
-uv run contoso eval-ladder --resume .foundry\results\ladder\<run>\manifest.json --report-only
+uv run fomo eval-ladder --participant cosmic-wombat --split dev  --repeats 1           # plan
+uv run fomo eval-ladder --participant cosmic-wombat --split dev  --repeats 1 --apply   # pipeline check
+uv run fomo eval-ladder --participant cosmic-wombat --split test --repeats 3 --apply   # headline
+uv run fomo eval-ladder --resume .foundry\results\ladder\<run>\manifest.json --report-only
 ```
 
 The first apply creates six evaluation-only prompt agents (`<name>-smart-rag-<type>` and
-`-any`); `contoso cleanup` removes them. Every apply needs its own approval.
+`-any`); `fomo cleanup` removes them. Every apply needs its own approval.
 
 ## 5. Stuck or late?
 
 | Situation | Command |
 |---|---|
-| Where am I? | `uv run contoso status` |
-| Jump to the end | `uv run contoso cheatcode --apply` (~5 min, reference classifier) |
-| Redo classification | `uv run contoso reset-participant --scope metadata --apply` |
+| Where am I? | `uv run fomo status` |
+| Jump to the end | `uv run fomo cheatcode --apply` (~5 min, reference classifier) |
+| Redo classification | `uv run fomo reset-participant --scope metadata --apply` |
 | Something failed | [troubleshooting.md](troubleshooting.md); logs in `.workshop/runs/<name>/` |
-| Done | `uv run contoso cleanup --apply` (asks you to type `DELETE`) |
+| Done | `uv run fomo cleanup --apply` (asks you to type `DELETE`) |

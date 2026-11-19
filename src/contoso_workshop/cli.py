@@ -1,4 +1,4 @@
-"""`contoso` command line. Skills call exactly these commands; they also work without Copilot.
+"""`fomo` command line (`contoso` is a compatibility alias). Also works without Copilot.
 
 Write semantics (every write command):
   default / --plan / --dry-run  show the itemized plan, change nothing
@@ -48,9 +48,9 @@ def _common(p: argparse.ArgumentParser, *, writes: bool = False) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    ap = argparse.ArgumentParser(prog="contoso", description="Contoso Oil Foundry workshop: preflight, "
+    ap = argparse.ArgumentParser(prog="fomo", description="FOMO metadata-agent workshop: preflight, "
                                  "provision, cheatcode and friends.")
-    ap.add_argument("--version", action="version", version=f"contoso-workshop {__version__}")
+    ap.add_argument("--version", action="version", version=f"fomo-workshop {__version__}")
     sub = ap.add_subparsers(dest="command", required=True, metavar="command")
 
     p = sub.add_parser("preflight", help="readiness report (read-only unless --fix --apply)")
@@ -146,6 +146,11 @@ def build_parser() -> argparse.ArgumentParser:
     q.add_argument("--deployment", help="deployment name (default: latest with workshop outputs)")
     q = esub.add_parser("show", help="print the resolved environment")
     _common(q)
+    q = esub.add_parser("select", help="remember a confirmed target, optionally create an empty resource group")
+    _common(q, writes=True)
+    q.add_argument("--tenant", required=True, help="confirmed directory (tenant) id")
+    q.add_argument("--create-resource-group", action="store_true", help="create only the named empty resource group")
+    q.add_argument("--location", help="required when creating a resource group")
 
     p = sub.add_parser("agents", help="talk to your prompt agents")
     asub = p.add_subparsers(dest="agents_command", required=True, metavar="action")
@@ -161,7 +166,7 @@ def build_parser() -> argparse.ArgumentParser:
         q = isub.add_parser(name, help=text)
         _common(q, writes=name == "deploy")
         q.add_argument("--parameters", type=Path, required=True, help="infra/parameters/*.bicepparam")
-        q.add_argument("--deployment", default="contoso-oil")
+        q.add_argument("--deployment", default="fomo")
         q.add_argument("--location", default="swedencentral", help="for creating the RG if missing")
 
     p = sub.add_parser("facilitator", help="facilitator views")
@@ -193,7 +198,7 @@ class Ctx:
         missing = self.env.missing()
         if missing:
             raise WorkshopError(f"workshop environment incomplete: {', '.join(missing)}",
-                                fix="run `uv run contoso env pull --resource-group <rg>` (facilitator shares it) "
+                                fix="run `uv run fomo env pull --resource-group <rg>` (facilitator shares it) "
                                 "or pass --config")
 
     def names(self, *, allow_new: bool = False) -> ParticipantNames:
@@ -254,7 +259,7 @@ def cmd_preflight(args: argparse.Namespace) -> int:
 
     ctx = Ctx(args, "preflight")
     if not ctx.json:
-        print(banner("rig", "Contoso Oil workshop preflight"), file=sys.stderr)
+        print(banner("robot", "🔎 FOMO Preflight"), file=sys.stderr)
     participant = None
     try:
         from .config import load_participant
@@ -299,7 +304,7 @@ def _preflight_fix(ctx: Ctx, report: Any) -> int:
         print(plan.render() if not ctx.json else "")
         return EXIT_OK
     if not ctx.args.apply:
-        print(plan.render() + "\n\nnothing changed. Re-run `contoso preflight --fix --apply` to apply, then the "
+        print(plan.render() + "\n\nnothing changed. Re-run `fomo preflight --fix --apply` to apply, then the "
               "checks run again.")
         return EXIT_OK
     verify_context(ctx.env)
@@ -323,7 +328,7 @@ def cmd_provision(args: argparse.Namespace) -> int:
     ctx.require_env()
     names = ctx.names(allow_new=True)
     if not ctx.json:
-        print(banner("rig", f"provision {names.hackername}"), file=sys.stderr)
+        print(banner("robot", f"🛠️ FOMO Provision for {names.hackername}"), file=sys.stderr)
     state = status(ctx.env, names)
     plan = plan_provision(ctx.env, names, state, smoke=not args.no_smoke)
 
@@ -347,14 +352,14 @@ def cmd_miner(args: argparse.Namespace) -> int:
         return write_flow(ctx, plan, lambda: ops.apply_miner_deploy(ctx.env, names, ctx.log, args.classifier,
                                                                      force=args.force),
                           after=lambda r: f"hosted agent {r['name']} v{r['version']} {r['status']}; "
-                          f"identity {r['principal_id']}\nnext: uv run contoso miner run --hosted --apply")
+                          f"identity {r['principal_id']}\nnext: uv run fomo miner run --hosted --apply")
     hosted = not args.local
     plan = ops.plan_miner_run(ctx.env, names, hosted=hosted, mode=args.mode, only=args.only, limit=args.limit,
                               dry_run=args.no_write)
 
     def after(r: dict[str, Any]) -> str:
         return (f"{r.get('runtime')}: {r.get('counts')}\nlabels: {r.get('labels')}\ntrace: {r.get('trace')}\n"
-                + ("next: uv run contoso smart --apply" if not args.no_write else ""))
+                + ("next: uv run fomo smart --apply" if not args.no_write else ""))
     return write_flow(ctx, plan, lambda: ops.apply_miner_run(ctx.env, names, ctx.log, hosted=hosted,
                                                              mode=args.mode, only=args.only, limit=args.limit,
                                                              dry_run=args.no_write, classifier=args.classifier),
@@ -374,7 +379,7 @@ def cmd_smart(args: argparse.Namespace) -> int:
     def after(r: dict[str, Any]) -> str:
         s = r["smart"]
         return (f"{names.smart_index}: document_type facets {s['facets']}; {s['contract_chunks']} contract chunks\n"
-                f"Smart RAG: {r['smart_rag']['name']} v{r['smart_rag']['version']}\nnext: uv run contoso eval")
+                f"Smart RAG: {r['smart_rag']['name']} v{r['smart_rag']['version']}\nnext: uv run fomo eval")
     return write_flow(ctx, plan, lambda: ops.apply_smart(ctx.env, names, ctx.log, smoke=not args.no_smoke,
                                                          reset=args.reset), after=after)
 
@@ -476,7 +481,7 @@ def cmd_cheatcode(args: argparse.Namespace) -> int:
     ctx.require_env()
     names = ctx.names(allow_new=True)
     if not ctx.json:
-        print(banner("barrel", f"cheatcode for {names.hackername}"), file=sys.stderr)
+        print(banner("robot", f"🚀 FOMO Cheatcode for {names.hackername}"), file=sys.stderr)
     state = status(ctx.env, names)
     plan = ops.plan_cheatcode(ctx.env, names, state, args.classifier)
 
@@ -486,7 +491,7 @@ def cmd_cheatcode(args: argparse.Namespace) -> int:
                 + "\n".join(ops.links(ctx.env, names))
                 + "\ntimings: " + ", ".join(f"{k} {v}s" for k, v in t.items())
                 + f"\nevaluation report: {r['evaluation']['paths']['markdown']}"
-                + "\nresources are left in place; `contoso cleanup --plan` shows what cleanup would delete")
+                + "\nresources are left in place; `fomo cleanup --plan` shows what cleanup would delete")
     return write_flow(ctx, plan, lambda: ops.apply_cheatcode(ctx.env, names, ctx.log, state, args.classifier,
                                                              force_deploy=args.force_deploy), after=after)
 
@@ -511,7 +516,7 @@ def cmd_reset(args: argparse.Namespace) -> int:
     names = ctx.names()
     plan = plan_reset(ctx.env, names, args.scope)
     return write_flow(ctx, plan, lambda: apply_reset(ctx.env, names, ctx.log, args.scope),
-                      after=lambda r: f"reset done: {r}\nnext: `contoso status`")
+                      after=lambda r: f"reset done: {r}\nnext: `fomo status`")
 
 
 def cmd_cleanup(args: argparse.Namespace) -> int:
@@ -538,6 +543,69 @@ def cmd_capacity(args: argparse.Namespace) -> int:
     return EXIT_OK if rep.fits else EXIT_BLOCKED
 
 
+def _env_select(ctx: Ctx) -> int:
+    from .azclient import az
+
+    args = ctx.args
+    if not args.subscription or not args.resource_group:
+        raise WorkshopError("env select requires explicit --subscription and --resource-group")
+    if args.create_resource_group and not args.location:
+        raise WorkshopError("--location is required with --create-resource-group")
+    target = {"tenant_id": args.tenant, "subscription_id": args.subscription, "resource_group": args.resource_group}
+    ctx.env = Environment(**target)
+    verify_context(ctx.env)
+    scope = ["--subscription", args.subscription, "--name", args.resource_group]
+
+    def check_group() -> bool:
+        exists = az("group", "exists", *scope)
+        if not isinstance(exists, bool):
+            raise Blocked("resource group existence could not be verified",
+                          fix="rerun the read-only group check; do not assume the group is absent")
+        if exists and args.create_resource_group:
+            raise Blocked("resource group already exists; choose the existing-group branch",
+                          fix="rerun env select without --create-resource-group")
+        if not exists and not args.create_resource_group:
+            raise Blocked("selected resource group does not exist",
+                          fix="select an existing group or review a plan with "
+                          "--create-resource-group --location <region>")
+        return exists
+
+    exists = check_group()
+    plan = Plan("env select", None, args.subscription, args.resource_group)
+    plan.notes.append(f"confirmed directory (tenant): {args.tenant}")
+    if not exists:
+        plan.add("create", f"resource group {args.resource_group}", f"empty group in {args.location}",
+                 cost="no resources deployed; the resource group itself has no charge")
+        plan.notes.append("requires Microsoft.Resources/subscriptions/resourceGroups/write at subscription scope; "
+                          "no roles are granted")
+    saved = Environment.load(environ={})
+    same_target = not args.create_resource_group and all(getattr(saved, key) == value for key, value in target.items())
+    if not same_target:
+        plan.notes.append("changing target clears saved resource endpoints; participant hackername is unchanged")
+    plan.add("write", str(ENV_FILE), "remember confirmed tenant, subscription and resource group")
+    plan.notes.append("an empty or selected resource group does not establish workshop readiness")
+
+    def apply() -> dict[str, Any]:
+        check_group()
+        if args.create_resource_group:
+            az("group", "create", *scope, "--location", args.location)
+        group = az("group", "show", *scope)
+        expected_id = f"/subscriptions/{args.subscription}/resourceGroups/{args.resource_group}"
+        if str(group.get("id", "")).lower() != expected_id.lower():
+            raise Blocked("resource group verification returned a different target; context was not saved")
+        selected = saved if same_target else Environment(**target)
+        if args.create_resource_group:
+            selected.location = args.location
+        selected.extra["confirmed_azure_context"] = target
+        path = selected.save()
+        ctx.env = selected
+        return {"path": str(path), "target": target, "created_resource_group": args.create_resource_group,
+                "missing": selected.missing()}
+
+    return write_flow(ctx, plan, apply, after=lambda r: f"saved confirmed Azure target to {r['path']}; "
+                      "workshop resources still require a separate readiness check/deployment")
+
+
 def _env_pull(ctx: Ctx, deployment: str | None) -> dict[str, Any]:
     from .azclient import az
 
@@ -553,7 +621,7 @@ def _env_pull(ctx: Ctx, deployment: str | None) -> dict[str, Any]:
                 and "foundry_account_name" in {k.lower() for k in ((d.get("properties") or {}).get("outputs") or {})}]
         if not deps:
             raise WorkshopError(f"no successful workshop deployment in {env.resource_group}",
-                                fix="facilitator: `contoso infra deploy --parameters ... --apply`",
+                                fix="facilitator: `fomo infra deploy --parameters ... --apply`",
                                 owner="facilitator")
         deps.sort(key=lambda d: d["properties"].get("timestamp", ""), reverse=True)
         deployment = deps[0]["name"]
@@ -561,6 +629,9 @@ def _env_pull(ctx: Ctx, deployment: str | None) -> dict[str, Any]:
     pulled = Environment.from_bicep_outputs(dep["properties"].get("outputs") or {}, subscription_id=sub,
                                             tenant_id=target["tenantId"], resource_group=env.resource_group,
                                             deployment_name=deployment)
+    confirmed = env.extra.get("confirmed_azure_context")
+    if confirmed == {key: getattr(pulled, key) for key in ("tenant_id", "subscription_id", "resource_group")}:
+        pulled.extra["confirmed_azure_context"] = confirmed
     path = pulled.save()
     ctx.env = pulled
     return {"path": str(path), "deployment": deployment, "missing": pulled.missing()}
@@ -568,6 +639,8 @@ def _env_pull(ctx: Ctx, deployment: str | None) -> dict[str, Any]:
 
 def cmd_env(args: argparse.Namespace) -> int:
     ctx = Ctx(args, "env")
+    if args.env_command == "select":
+        return _env_select(ctx)
     if args.env_command == "pull":
         r = _env_pull(ctx, args.deployment)
         ctx.out(f"wrote {r['path']} from deployment {r['deployment']}"
@@ -633,11 +706,11 @@ def cmd_infra(args: argparse.Namespace) -> int:
     def apply() -> dict[str, Any]:
         if not exists:
             az("group", "create", "-n", rg, "-l", args.location, "--subscription", sub,
-               "--tags", "workshop=contoso-oil")
+               "--tags", "workshop=fomo")
         ctx.log.info("deploying Bicep (5-15 minutes on a clean subscription)")
         az("deployment", "group", "create", *base, "-o", "none", timeout=3600)
         return _env_pull(ctx, args.deployment)
-    return write_flow(ctx, plan, apply, after=lambda r: f"deployed; wrote {r['path']}\nnext: uv run contoso "
+    return write_flow(ctx, plan, apply, after=lambda r: f"deployed; wrote {r['path']}\nnext: uv run fomo "
                       "preflight --participants <N>")
 
 

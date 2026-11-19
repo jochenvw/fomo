@@ -3,7 +3,7 @@
 using '../main.bicep'
 
 param location = 'swedencentral'
-param prefix = 'cohack'
+param prefix = 'fomohack'
 param eventId = 'participant'
 param searchSku = 'basic'
 

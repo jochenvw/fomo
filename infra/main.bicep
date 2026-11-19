@@ -1,8 +1,8 @@
-// Contoso Oil Document Intelligence workshop - shared infrastructure.
+// FOMO metadata-agent workshop - shared infrastructure for the Contoso Oil demo.
 // Resource-group scope. Creates (or reuses) Foundry account+project, 3 model
 // deployments, Blob storage, Azure AI Search, the project->Search connection and RBAC.
 // Per-participant data-plane objects (container, indexes, indexers, agents) are created
-// by `uv run contoso provision`, not by Bicep.
+// by `uv run fomo provision`, not by Bicep.
 
 targetScope = 'resourceGroup'
 
@@ -12,7 +12,10 @@ param location string = resourceGroup().location
 @description('Short name used to derive resource names.')
 @minLength(3)
 @maxLength(12)
-param prefix string = 'contosooil'
+param prefix string = 'fomo'
+
+@description('Foundry project name. Pin the original name when redeploying a legacy environment.')
+param projectName string = 'fomo'
 
 @description('Workshop/event id appended to tags (e.g. 2026-05-ams).')
 param eventId string = 'dev'
@@ -58,7 +61,7 @@ param decisionModel object = {
   capacity: 50
 }
 
-@description('Facilitator evaluation only (`contoso eval-ladder`): judge from a different model family than the agents. Participants never need it.')
+@description('Facilitator evaluation only (`fomo eval-ladder`): judge from a different model family than the agents. Participants never need it.')
 param deployEvaluationJudge bool = false
 
 param evaluationJudgeModel object = {
@@ -75,7 +78,7 @@ param participants array = []
 
 param allowParticipantAgentGrants bool = true
 
-param searchConnectionName string = 'contoso-search'
+param searchConnectionName string = 'fomo-search'
 
 @description('Optional explicit names (some RPs reject generated names that happen to contain reserved substrings).')
 param foundryAccountNameOverride string = ''
@@ -98,13 +101,12 @@ param allowedIpPrefixes array = []
 
 var suffix = uniqueString(subscription().id, resourceGroup().id, prefix)
 var accountName = empty(foundryAccountNameOverride) ? toLower('${prefix}-${suffix}') : foundryAccountNameOverride
-var projectName = 'contoso-oil'
 var storageAccountName = empty(storageAccountNameOverride) ? toLower(take('${replace(prefix, '-', '')}st${suffix}', 24)) : storageAccountNameOverride
 var searchServiceName = empty(searchServiceNameOverride) ? toLower('${prefix}-srch-${suffix}') : searchServiceNameOverride
 var tags = {
-  workshop: 'contoso-oil'
+  workshop: 'fomo'
   event: eventId
-  managedBy: 'contoso-workshop-cli'
+  managedBy: 'fomo-workshop-cli'
 }
 
 module foundry 'modules/foundry.bicep' = {

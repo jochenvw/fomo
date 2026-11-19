@@ -102,3 +102,12 @@ def test_verify_context_checks_saved_tenant(monkeypatch, env, tenant):
         if tenant == "legacy":
             env.tenant_id = ""
         assert verify_context(env)["tenant"] == account["tenantId"]
+
+
+def test_context_verification_does_not_mislabel_network_failure_as_signed_out(monkeypatch, env):
+    def interrupted(*args, **kwargs):
+        raise WorkshopError("connection interrupted after 3 attempt(s)", fix="check network and retry the read")
+
+    monkeypatch.setattr(plan_mod, "az", interrupted)
+    with pytest.raises(WorkshopError, match="connection interrupted"):
+        verify_context(env)

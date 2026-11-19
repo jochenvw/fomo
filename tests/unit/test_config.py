@@ -35,6 +35,20 @@ def test_load_without_files_uses_defaults(tmp_path):
     assert env.missing() == list(Environment.REQUIRED)
 
 
+@pytest.mark.parametrize("fomo_value", ["fomo-project", ""])
+def test_fomo_overrides_legacy_variables_without_losing_saved_names(tmp_path, fomo_value):
+    env_file = tmp_path / "environment.json"
+    env_file.write_text(json.dumps({"project_name": "saved-project", "search_connection_name": "contoso-search",
+                                    "storage_account_name": "contosostore"}), encoding="utf-8")
+    environ = {"CONTOSO_PROJECT_NAME": "legacy-project", "FOMO_PROJECT_NAME": fomo_value}
+    loaded = Environment.load(env_file=env_file, environ=environ)
+    assert loaded.project_name == (fomo_value or "legacy-project")
+    assert loaded.search_connection_name == "contoso-search"
+    assert loaded.storage_account_name == "contosostore"
+    assert Environment.load(env_file=env_file, environ=environ,
+                            overrides={"project_name": "cli-project"}).project_name == "cli-project"
+
+
 def test_missing_config_file_raises(tmp_path):
     with pytest.raises(ConfigError):
         Environment.load(config_file=tmp_path / "nope.yaml", env_file=tmp_path / "x.json", environ={})

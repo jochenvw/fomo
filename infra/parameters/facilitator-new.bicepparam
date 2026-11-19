@@ -1,16 +1,16 @@
 // Clean-room facilitator deployment: everything new, shared by the cohort (Topology B).
-// az deployment group create -g rg-contoso-oil-<event> -f infra/main.bicep -p infra/parameters/facilitator-new.bicepparam
+// az deployment group create -g rg-fomo-<event> -f infra/main.bicep -p infra/parameters/facilitator-new.bicepparam
 using '../main.bicep'
 
 param location = 'swedencentral'
-param prefix = 'contosooil'
+param prefix = 'fomo'
 param eventId = 'dev'
 
 // 40 participants x 5 Search objects = 200 -> standard2 (S2) or split cohorts over
-// several services. Run `uv run contoso capacity --participants 40` first.
+// several services. Run `uv run fomo capacity --participants 40` first.
 param searchSku = 'basic'
 
-// Facilitator evaluation judge (gpt-5.4) for `contoso eval-ladder`. Needs gpt-5.4 quota.
+// Facilitator evaluation judge (gpt-5.4) for `fomo eval-ladder`. Needs gpt-5.4 quota.
 param deployEvaluationJudge = true
 
 // Facilitator (and, for Topology B, a participants Entra group). Fill in object ids.

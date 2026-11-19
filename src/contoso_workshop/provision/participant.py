@@ -2,7 +2,7 @@
 
 The manifest (`.workshop/runs/<hackername>/manifest.json`) records exact resource IDs,
 endpoints, deployments, indexer status and ownership. It is rebuilt from live Azure state
-by `contoso status`, never from assumptions.
+by `fomo status`, never from assumptions.
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ def resolve_participant(env: Environment, explicit: str | None, *, allow_new: bo
         return names
     if not allow_new:
         raise NamingError("no participant selected",
-                          fix="pass --participant <hackername> or run `contoso provision` first")
+                          fix="pass --participant <hackername> or run `fomo provision` first")
     search = SearchClient(env)
     taken = set(search.list_names("indexes"))
 

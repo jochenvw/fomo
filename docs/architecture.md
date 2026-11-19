@@ -75,7 +75,7 @@ raw, the difference is not caused by classification.
 |---|---|---|
 | Bicep | `participant.bicepparam` per participant | `facilitator-new.bicepparam` once |
 | Isolation | separate resources | namespaces + RBAC; see [security](security-and-rbac.md) |
-| Search SKU | basic per participant | from `contoso capacity` (40 → S2) |
+| Search SKU | basic per participant | from `fomo capacity` (40 → S2) |
 | Cost | ~N × fixed costs | one set of fixed costs |
 | Lead time | each participant deploys (10-15 min) | facilitator deploys days ahead |
 
@@ -86,7 +86,7 @@ only the connection, RBAC and missing deployments to customer-owned resources.
 
 | Package | Responsibility |
 |---|---|
-| `cli.py` | argparse entry `contoso`; plan → confirm → apply wrapper |
+| `cli.py` | argparse entry `fomo`; plan → confirm → apply wrapper |
 | `plan.py` | `Plan`/`Action`, context verification, typed confirmation |
 | `preflight/` | read-only checks, scrubbed JSON report, remediation plan |
 | `provision/` | `plan_*`/`apply_*` for provision, miner, smart, eval, cheatcode; status/stage |

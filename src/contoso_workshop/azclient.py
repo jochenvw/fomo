@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import random
 import shutil
 import subprocess  # nosec B404 - only fixed `az` argument lists, never shell=True
@@ -151,19 +152,54 @@ def az_path() -> str | None:
 
 
 def az(*args: str, timeout: float = 120, check: bool = True) -> Any:
-    """Run `az ... -o json` and parse the output. Raises WorkshopError on failure if check."""
+    """Run `az ... -o json`; retry only explicitly known read commands on transient failure."""
     exe = az_path()
     if exe is None:
         raise WorkshopError("Azure CLI (az) not found", fix="install Azure CLI: https://aka.ms/azcli")
-    proc = subprocess.run(  # noqa: S603  # nosec B603
-        [exe, *args, "-o", "json"], capture_output=True, text=True, timeout=timeout, check=False
-    )
-    if proc.returncode != 0:
+    read_only = args[:2] in {
+        ("account", "show"), ("account", "list"), ("account", "get-access-token"),
+        ("group", "show"), ("group", "exists"), ("group", "list"),
+    } or args[:3] in {("deployment", "group", "show"), ("deployment", "group", "list")}
+    attempts = 3 if read_only else 1
+    for attempt in range(attempts):
+        try:
+            proc = subprocess.run(  # noqa: S603  # nosec B603
+                [exe, *args, "-o", "json"], capture_output=True, text=True, timeout=timeout, check=False
+            )
+            if proc.returncode == 0:
+                out = proc.stdout.strip()
+                return json.loads(out) if out else None
+            error = proc.stderr.strip()[:800]
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            error = str(exc)[:800]
+        except json.JSONDecodeError as exc:
+            error = f"incomplete JSON response: {exc}"
+        permanent = any(text in error.lower() for text in (
+            "authorizationfailed", "authenticationfailed", "forbidden", "requestdisallowedbypolicy",
+            "resourcegroupnotfound", "resourcenotfound", "aadsts", "az login",
+        ))
+        transient = not permanent and any(text in error.lower() for text in (
+            "connection interrupted", "connection aborted", "connection reset", "remotedisconnected",
+            "connectionerror", "connection broken", "remote end closed connection", "incomplete json response",
+            "timed out", "timeout", "temporarily unavailable", "temporary failure", "name resolution",
+            "getaddrinfo failed", "503 service unavailable", "502 bad gateway", "504 gateway timeout",
+            "429 too many requests",
+        ))
+        if transient and attempt + 1 < attempts:
+            delay = 2 ** attempt
+            logging.getLogger(__name__).warning("Azure CLI read interrupted; retrying attempt %s/%s in %ss",
+                                              attempt + 2, attempts, delay)
+            time.sleep(delay)
+            continue
         if check:
-            raise WorkshopError(f"az {' '.join(args[:3])} failed: {proc.stderr.strip()[:800]}")
+            fix = None
+            if transient:
+                fix = ("check connectivity, VPN/proxy and Azure status, then rerun the read-only check"
+                       if read_only else
+                       "inspect the target's current state before retrying; the interrupted write may have completed")
+            raise WorkshopError(f"az {' '.join(args[:3])} failed after {attempt + 1} attempt(s): {error}", fix=fix)
         return None
-    out = proc.stdout.strip()
-    return json.loads(out) if out else None
+    raise AssertionError("unreachable")
 
 
 def arm(method: str, path: str, api_version: str, body: Any = None, **kw: Any) -> requests.Response:

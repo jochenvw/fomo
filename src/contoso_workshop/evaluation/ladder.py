@@ -433,7 +433,7 @@ def inspect(env: Environment, names: ParticipantNames, rows: list[dict[str, Any]
         try:
             latest = project.agents.get(name).versions.latest
         except Exception as exc:
-            raise Blocked(f"{name} not found", fix="run `contoso provision` and `contoso smart` first") from exc
+            raise Blocked(f"{name} not found", fix="run `fomo provision` and `fomo smart` first") from exc
         existing[name] = {"version": str(latest.version), "definition": latest.definition.as_dict()}
     tools = expected_tools(env, names)
     for name, info in existing.items():
@@ -495,7 +495,7 @@ def build_plan(env: Environment, names: ParticipantNames, rows: list[dict[str, A
         if state["action"] != "exists":
             p.add("create" if state["action"] == "create" else "update", f"prompt agent {state['name']}",
                   f"smart index, filter {state['filter'] or 'none'}; identical model/instructions/top_k to Smart RAG "
-                  "(evaluation only; removed by `contoso cleanup`)")
+                  "(evaluation only; removed by `fomo cleanup`)")
     if not done.get("routes"):
         p.add("invoke", f"router {env.decision_deployment}", f"{len(rows)} questions (question text only)",
               cost=f"{len(rows)} decision calls, ~60 input tokens each")
@@ -792,7 +792,7 @@ def _execute(env: Environment, names: ParticipantNames, rows: list[dict[str, Any
     by_id = {r["id"]: r for r in rows}
     with (AIProjectClient(endpoint=env.resolved_project_endpoint(), credential=credential()) as project,
           project.get_openai_client() as client):
-        _submit(project, client, state, "judge_eval", f"Contoso Oil {names.hackername} RAG ladder {state['run_id']}",
+        _submit(project, client, state, "judge_eval", f"FOMO {names.hackername} RAG ladder {state['run_id']}",
                 judge_criteria(judge), _string_schema(("key", "qid", "variant", "repeat", "split", "stratum", "query",
                                                        "response", "ground_truth", "context")),
                 cast(dict[str, list[dict[str, Any]]], judge_items(records, by_id, titles)), out, log)
@@ -806,7 +806,7 @@ def _execute(env: Environment, names: ParticipantNames, rows: list[dict[str, Any
                     "retrieved_documents": r["retrieved_documents"]})
         try:
             _submit(project, client, state, "retrieval_eval",
-                    f"Contoso Oil {names.hackername} retrieval {state['run_id']}",
+                    f"FOMO {names.hackername} retrieval {state['run_id']}",
                     retrieval_criteria(), RETRIEVAL_SCHEMA, retrieval_items, out, log)
         except Exception as exc:  # optional: local P@5/R@5/nDCG remain authoritative
             state["retrieval_error"] = str(exc)[:600]
@@ -816,7 +816,7 @@ def _execute(env: Environment, names: ParticipantNames, rows: list[dict[str, Any
         if state.get("retrieval_eval", {}).get("runs"):
             _collect(client, state, "retrieval_eval", out, timeout=max(60.0, timeout / 4), log=log)
     if not complete:
-        raise Blocked(f"Foundry judging still running; resume with `contoso eval-ladder --resume "
+        raise Blocked(f"Foundry judging still running; resume with `fomo eval-ladder --resume "
                       f"{out / 'manifest.json'} --apply`")
     return finalize(out)
 

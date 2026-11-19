@@ -24,8 +24,8 @@ uv sync --all-groups
 | Layer | Command | Needs |
 |---|---|---|
 | Unit (CI) | `uv run pytest -q` | nothing; all Azure calls mocked |
-| Integration | `$env:CONTOSO_LIVE='1'; $env:CONTOSO_TEST_PARTICIPANT='<name>'; uv run pytest -m integration` | `az login`, `.workshop/environment.json`, a completed participant |
-| End-to-end | `$env:CONTOSO_E2E='1'; uv run pytest -m e2e` | as above; creates and deletes two fresh participants (~10 min, small cost) |
+| Integration | `$env:FOMO_LIVE='1'; $env:FOMO_TEST_PARTICIPANT='<name>'; uv run pytest -m integration` | `az login`, `.workshop/environment.json`, a completed participant |
+| End-to-end | `$env:FOMO_E2E='1'; uv run pytest -m e2e` | as above; creates and deletes two fresh participants (~10 min, small cost) |
 
 ## 4. Pull requests
 

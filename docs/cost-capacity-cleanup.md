@@ -20,8 +20,8 @@ Binding constraint is **indexes / indexers / skillsets (2 each)**.
 | S2 | 200 | 100 | 40-person workshop (default recommendation) |
 
 ```powershell
-uv run contoso capacity --participants 40 --sku basic   # exit 2 = does not fit
-uv run contoso capacity --participants 40 --sku standard2 --replicas 2 --hours 8
+uv run fomo capacity --participants 40 --sku basic   # exit 2 = does not fit
+uv run fomo capacity --participants 40 --sku standard2 --replicas 2 --hours 8
 ```
 
 ## 3. Cost model (list prices, swedencentral, 8 h, 40 participants)
@@ -35,16 +35,16 @@ uv run contoso capacity --participants 40 --sku standard2 --replicas 2 --hours 8
 | Hosted agents | compute while active | scale-to-zero; check Foundry pricing |
 | Storage | 40 MB | negligible |
 
-`contoso capacity` prints the current estimate; the CLI never invents prices it does not know.
+`fomo capacity` prints the current estimate; the CLI never invents prices it does not know.
 **Search is billed while it exists** — delete it after the workshop.
 
 ## 4. Cleanup
 
 | Goal | Command | Removes |
 |---|---|---|
-| Undo classification | `contoso reset-participant --scope metadata --apply` | classification metadata + miner checkpoint; smart indexer disabled (agents and container stay) |
-| Rebuild indexes | `contoso reset-participant --scope indexes --apply` | resets change tracking and re-runs both enabled indexers (re-embeds) |
-| Leave the workshop | `contoso cleanup --apply [--local]` | all participant objects + agent grants (+ local run folder) |
+| Undo classification | `fomo reset-participant --scope metadata --apply` | classification metadata + miner checkpoint; smart indexer disabled (agents and container stay) |
+| Rebuild indexes | `fomo reset-participant --scope indexes --apply` | resets change tracking and re-runs both enabled indexers (re-embeds) |
+| Leave the workshop | `fomo cleanup --apply [--local]` | all participant objects + agent grants (+ local run folder) |
 | End the workshop | `az group delete -n <rg>` + `az cognitiveservices account purge …` | everything |
 
 All destructive commands show an itemized plan and require typing `DELETE`.
@@ -58,11 +58,11 @@ Everything is reproducible from this repository; only local result files carry h
 2. In `infra/parameters/facilitator-new.bicepparam`, set `participants` to the new tenant's object
    ids, and set `storagePolicyExemptionTags` only if a governance policy requires it (MCAPS:
    `SecurityControl: 'Ignore'`).
-3. `uv run contoso infra deploy --parameters infra/parameters/facilitator-new.bicepparam
+3. `uv run fomo infra deploy --parameters infra/parameters/facilitator-new.bicepparam
    --resource-group <rg> --apply` (writes `.workshop/environment.json`), then
-   `uv run contoso preflight --participants <N>`.
-4. Per participant: `uv run contoso cheatcode --participant <name> --apply` (or the guided steps).
-5. Evaluations: `contoso eval-ladder` recreates its route agents on first apply.
+   `uv run fomo preflight --participants <N>`.
+4. Per participant: `uv run fomo cheatcode --participant <name> --apply` (or the guided steps).
+5. Evaluations: `fomo eval-ladder` recreates its route agents on first apply.
 
 Old Foundry portal links in saved reports stop working after the source project is deleted;
 the downloaded outputs under `.foundry/results/` remain the record.

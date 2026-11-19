@@ -1,7 +1,7 @@
 """Workshop configuration.
 
 Precedence (low -> high): YAML config file -> .workshop/environment.json (written from the
-Bicep deployment outputs) -> CONTOSO_* environment variables -> CLI flags.
+Bicep deployment outputs) -> CONTOSO_* (legacy) -> FOMO_* environment variables -> CLI flags.
 """
 
 from __future__ import annotations
@@ -70,7 +70,7 @@ class Environment:
     search_service_name: str = ""
     search_endpoint: str = ""
     search_sku: str = ""
-    search_connection_name: str = "contoso-search"
+    search_connection_name: str = "fomo-search"
 
     deployment_name: str = ""
     extra: dict[str, Any] = field(default_factory=dict)
@@ -136,7 +136,7 @@ class Environment:
         if missing:
             raise ConfigError(
                 f"workshop environment incomplete; missing: {', '.join(missing)}",
-                fix="run `uv run contoso env pull --resource-group <rg>` or set CONTOSO_* variables "
+                fix="run `uv run fomo env pull --resource-group <rg>` or set FOMO_* variables "
                 "(see .env.example)",
             )
         return self
@@ -180,13 +180,14 @@ class Environment:
         if env_file.exists():
             env.apply(json.loads(env_file.read_text(encoding="utf-8")))
         environ = dict(os.environ) if environ is None else environ
-        env.apply(
-            {
-                name: environ.get(f"CONTOSO_{name.upper()}")
-                for name in cls.field_names()
-                if environ.get(f"CONTOSO_{name.upper()}")
-            }
-        )
+        for prefix in ("CONTOSO", "FOMO"):
+            env.apply(
+                {
+                    name: environ.get(f"{prefix}_{name.upper()}")
+                    for name in cls.field_names()
+                    if environ.get(f"{prefix}_{name.upper()}")
+                }
+            )
         if overrides:
             env.apply(overrides)
         return env

@@ -106,7 +106,7 @@ def datasource_definition(env: Environment, names: ParticipantNames) -> dict[str
         "dataDeletionDetectionPolicy": {
             "@odata.type": "#Microsoft.Azure.Search.NativeBlobSoftDeleteDeletionDetectionPolicy"
         },
-        "description": f"contoso-oil workshop inbox for {names.hackername}",
+        "description": f"FOMO workshop inbox for {names.hackername}",
     }
 
 
@@ -173,7 +173,7 @@ def skillset_definition(env: Environment, name: str, target_index: str, *, smart
         mappings += [{"name": f, "source": f"/document/{f}_v"} for f in CLASSIFICATION_FIELDS]
     return {
         "name": name,
-        "description": "contoso-oil chunk + embed (" + ("smart" if smart else "raw") + ")",
+        "description": "FOMO chunk + embed (" + ("smart" if smart else "raw") + ")",
         "skills": skills,
         "indexProjections": {
             "selectors": [

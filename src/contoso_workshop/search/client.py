@@ -122,7 +122,7 @@ class SearchClient:
                 )
             if time.monotonic() - t0 > timeout:
                 raise SearchError(f"indexer {name} did not finish within {timeout:.0f}s (status {status})",
-                                  fix="check the indexer in the portal or `contoso status`; rerun later")
+                                  fix="check the indexer in the portal or `fomo status`; rerun later")
             time.sleep(poll)
 
     def count(self, index: str, filter_: str | None = None) -> int:

@@ -42,7 +42,7 @@ class AgentSpec:
     @property
     def description(self) -> str:
         scope = f"filter: {self.filter}" if self.filter else "no filter"
-        return f"contoso-oil RAG over {self.index} ({self.query_type}, top_k={self.top_k}, {scope})"
+        return f"FOMO RAG over {self.index} ({self.query_type}, top_k={self.top_k}, {scope})"
 
 
 def agent_specs(env: Environment, names: ParticipantNames) -> dict[str, AgentSpec]:
@@ -120,7 +120,7 @@ class PromptAgents:
             except Exception as exc:
                 raise AgentError(
                     f"project connection '{self.env.search_connection_name}' not found: {exc}",
-                    fix="run `contoso provision --apply` as facilitator (infra creates the connection)",
+                    fix="run `fomo provision --apply` as facilitator (infra creates the connection)",
                     owner="facilitator",
                 ) from exc
         return self._connection_id
@@ -158,7 +158,7 @@ class PromptAgents:
             pass
         created = self.client.agents.create_version(
             agent_name=spec.name, definition=self.definition(spec), description=spec.description,
-            metadata={"workshop": "contoso-oil", "index": spec.index, "filter": spec.filter or ""},
+            metadata={"workshop": "fomo", "index": spec.index, "filter": spec.filter or ""},
         )
         return str(created.version)
 
@@ -183,7 +183,7 @@ class PromptAgents:
                 resp = oa.responses.create(input=question, tool_choice="required")
         except Exception as exc:
             raise AgentError(f"agent {agent_name} failed: {exc}"[:800],
-                             fix="check `contoso status`; 429 means wait a minute and retry") from exc
+                             fix="check `fomo status`; 429 means wait a minute and retry") from exc
         latency = int((time.perf_counter() - start) * 1000)
         answer = AgentAnswer(agent=agent_name, question=question, text=resp.output_text or "",
                              latency_ms=latency, response_id=resp.id)

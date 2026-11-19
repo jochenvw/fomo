@@ -50,6 +50,6 @@ def test_source_metadata_is_valid_blob_metadata():
     doc = CorpusDocument("doc-009", "originals/doc-009.pdf", "ab" * 32, "R\u00e9sum\u00e9 \u2013 Well Test", "pdf")
     meta = source_metadata(doc, "2026.1")
     assert meta == {"doc_id": "doc-009", "title": "Resume - Well Test", "source_sha256": "ab" * 32,
-                    "corpus_version": "2026.1", "workshop": "contoso-oil"}
+                    "corpus_version": "2026.1", "workshop": "fomo"}
     validate_metadata(meta)
     assert not set(meta) & {"document_type", "classification_version"}

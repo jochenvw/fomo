@@ -1,10 +1,10 @@
-"""Thematic ASCII art for headings only. Plain ASCII, monochrome-safe, no spinners."""
+"""Thematic ASCII mascots for human-readable headings; titles may include emoji."""
 
 from __future__ import annotations
 
 OIL_RIG = r"""
         |>
-       /|\        CONTOSO OIL  //  Document Intelligence Workshop
+       /|\        FOMO  //  Metadata-Agent Workshop
       / | \
      /__|__\      Simple RAG  ->  Metadata Miner  ->  Smart RAG
     |___|___|
@@ -19,9 +19,10 @@ BARREL = r"""
 """
 
 ROBOT = r"""
-   [o_o]    {title}
-   /|_|\
-    / \
+   [o_o]    F O M O
+   /|_|\    Foundry Organizes Metadata.
+    / \     Occasionally.
+            {title}
 """
 
 

@@ -18,16 +18,16 @@ bicep:
 	az bicep build --file infra/main.bicep --stdout > /dev/null
 	az bicep build --file infra/reuse-existing.bicep --stdout > /dev/null
 preflight:        ## read-only readiness check: make preflight N=40
-	uv run contoso preflight --participants $(N)
+	uv run fomo preflight --participants $(N)
 provision:        ## plan only; add --apply yourself after reading the plan
-	uv run contoso provision $(PARTICIPANT)
+	uv run fomo provision $(PARTICIPANT)
 cheatcode:        ## plan only
-	uv run contoso cheatcode $(PARTICIPANT)
+	uv run fomo cheatcode $(PARTICIPANT)
 status:
-	uv run contoso status $(PARTICIPANT)
+	uv run fomo status $(PARTICIPANT)
 capacity:
-	uv run contoso capacity --participants $(N)
+	uv run fomo capacity --participants $(N)
 corpus:           ## regenerate the synthetic corpus deterministically
 	uv run python -m corpus.generator
-integration:      ## live, read-mostly tests; needs CONTOSO_LIVE=1 and CONTOSO_TEST_PARTICIPANT
+integration:      ## live, read-mostly tests; needs FOMO_LIVE=1 and FOMO_TEST_PARTICIPANT
 	uv run pytest -m integration -q

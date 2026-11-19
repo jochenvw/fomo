@@ -128,12 +128,12 @@ def apply_provision(env: Environment, names: ParticipantNames, log: RunLogger, *
                  f"{run.items_failed} failed ({run.seconds:.0f}s)")
         if not run.ok:
             raise SearchError(f"raw indexer {run.status}: {'; '.join(run.errors) or 'see portal'}",
-                              fix="run `contoso preflight` (Search identity -> Storage / embeddings)",
+                              fix="run `fomo preflight` (Search identity -> Storage / embeddings)",
                               owner="facilitator")
         chunks = search.wait_for_count(names.raw_index)
         if chunks == 0:
             raise SearchError(f"{names.raw_index} has 0 chunks after a successful run",
-                              fix="check that the container has documents (`contoso status`)")
+                              fix="check that the container has documents (`fomo status`)")
         hits = search.query(names.raw_index, canonical_question(), top=3, select="doc_id,title,url")
         log.info(f"{names.raw_index}: {chunks} chunks; top hit for the canonical question: "
                  + (f"{hits[0].get('doc_id')} '{hits[0].get('title')}' {hits[0].get('url')}" if hits else "none"))
@@ -169,11 +169,11 @@ def apply_provision(env: Environment, names: ParticipantNames, log: RunLogger, *
 PROVISION_NEXT = """next:
   1. open {run_dir}/miner/README.md and finish the TODOs in classifier.yaml
   2. try it (read-only):   uv run python {run_dir}/miner/try_classifier.py doc-003 doc-018
-  3. deploy + run hosted:  uv run contoso miner deploy --classifier {run_dir}/miner/classifier.yaml --apply
-                           uv run contoso miner run --hosted --apply
-  4. smart index + agent:  uv run contoso smart --apply
-  5. compare:              uv run contoso eval
-recover: rerun `uv run contoso provision --apply` (idempotent); `uv run contoso status` shows what exists."""
+  3. deploy + run hosted:  uv run fomo miner deploy --classifier {run_dir}/miner/classifier.yaml --apply
+                           uv run fomo miner run --hosted --apply
+  4. smart index + agent:  uv run fomo smart --apply
+  5. compare:              uv run fomo eval
+recover: rerun `uv run fomo provision --apply` (idempotent); `uv run fomo status` shows what exists."""
 
 
 # ---- hosted miner ----------------------------------------------------------------------------
@@ -228,7 +228,7 @@ def invoke_hosted(env: Environment, names: ParticipantNames, log: RunLogger, pay
     miner = HostedMiner(env, names)
     if miner.current() is None:
         raise AgentError(f"hosted agent {names.metadata_miner_agent} does not exist",
-                         fix="run `contoso miner deploy --apply` (or `contoso cheatcode --apply`)")
+                         fix="run `fomo miner deploy --apply` (or `fomo cheatcode --apply`)")
     start = time.monotonic()
     while True:
         try:
@@ -405,7 +405,7 @@ def apply_cheatcode(env: Environment, names: ParticipantNames, log: RunLogger, s
         raise Blocked(
             f"hosted Metadata Miner could not be deployed: {exc}",
             fix="this is a real blocker for the hosted requirement. For learning continuity only: "
-            "`contoso miner run --local --apply` then `contoso smart --apply` (clearly labeled local mode)",
+            "`fomo miner run --local --apply` then `fomo smart --apply` (clearly labeled local mode)",
             owner=exc.owner) from exc
     out["miner_run"] = timed("miner_run", lambda: apply_miner_run(env, names, log, hosted=True, mode="delta",
                                                                    only=None, limit=None, dry_run=False))

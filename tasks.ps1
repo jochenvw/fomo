@@ -31,11 +31,11 @@ switch ($Task) {
     'check'       { & $PSCommandPath lint; & $PSCommandPath typecheck; & $PSCommandPath test }
     'bicep'       { Invoke-Step @('az', 'bicep', 'build', '--file', 'infra/main.bicep', '--stdout') | Out-Null
                     Invoke-Step @('az', 'bicep', 'build', '--file', 'infra/reuse-existing.bicep', '--stdout') | Out-Null }
-    'preflight'   { Invoke-Step @('uv', 'run', 'contoso', 'preflight', '--participants', "$N") }
-    'provision'   { Invoke-Step (@('uv', 'run', 'contoso', 'provision') + $participant) }
-    'cheatcode'   { Invoke-Step (@('uv', 'run', 'contoso', 'cheatcode') + $participant) }
-    'status'      { Invoke-Step (@('uv', 'run', 'contoso', 'status') + $participant) }
-    'capacity'    { Invoke-Step @('uv', 'run', 'contoso', 'capacity', '--participants', "$N") }
+    'preflight'   { Invoke-Step @('uv', 'run', 'fomo', 'preflight', '--participants', "$N") }
+    'provision'   { Invoke-Step (@('uv', 'run', 'fomo', 'provision') + $participant) }
+    'cheatcode'   { Invoke-Step (@('uv', 'run', 'fomo', 'cheatcode') + $participant) }
+    'status'      { Invoke-Step (@('uv', 'run', 'fomo', 'status') + $participant) }
+    'capacity'    { Invoke-Step @('uv', 'run', 'fomo', 'capacity', '--participants', "$N") }
     'corpus'      { Invoke-Step @('uv', 'run', 'python', '-m', 'corpus.generator') }
     'integration' { Invoke-Step @('uv', 'run', 'pytest', '-m', 'integration', '-q') }
 }

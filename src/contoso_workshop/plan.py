@@ -70,7 +70,7 @@ class Plan:
 
 def verify_context(env: Environment) -> dict[str, Any]:
     """The signed-in az context must match the configured tenant/subscription before every apply."""
-    acct = az("account", "show", check=False)
+    acct = az("account", "show")
     if not acct:
         raise ConfigError("not signed in to Azure CLI", fix="run `az login` (and `az account set -s <id>`)")
     if env.tenant_id and acct.get("tenantId") != env.tenant_id:
@@ -82,7 +82,7 @@ def verify_context(env: Environment) -> dict[str, Any]:
         raise ConfigError(
             f"Azure CLI is on subscription {acct.get('id')} ({acct.get('name')}), but the workshop "
             f"environment targets {env.subscription_id}",
-            fix=f"run `az account set -s {env.subscription_id}` or re-run `contoso env pull`",
+            fix=f"run `az account set -s {env.subscription_id}` or re-run `fomo env pull`",
         )
     if acct.get("state") not in (None, "Enabled"):
         raise ConfigError(f"subscription state is {acct.get('state')}", owner="admin")

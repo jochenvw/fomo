@@ -42,7 +42,7 @@ marked *unverified*. Nothing in this repo fakes a provisioning, inference, agent
 | 3 | Data layout | **one container, two indexer schemas** | same bytes feed both indexes; raw schema has no classification fields → no leakage | smart index reflects metadata only after the smart indexer re-runs |
 | 4 | Smart RAG filter | **fixed** `document_type eq 'contract'` | verified, simple, honest | harms non-contract questions (q05, q06, q08 → P@5 0); `smart_desired` eval row shows intent-aware filtering's potential |
 | 5 | Scoring profile | **stretch**: `boost-contracts` (tag boost 3) evaluated, not used by agents | filter is mandatory; boost is a softer alternative | boost P@5 0.28 vs filter 0.23 / desired 0.30 |
-| 6 | Skills | **three folders**, each a thin wrapper over `contoso` CLI | three discoverable entry points; same code paths without Copilot | small duplication in SKILL.md text |
+| 6 | Skills | **three folders**, each a thin wrapper over `fomo` CLI | three discoverable entry points; same code paths without Copilot | small duplication in SKILL.md text |
 | 7 | Storage network | **public endpoint + Entra-only** (`storageNetworkMode='public'`) | hosted agents cannot reach perimeter-protected Storage (see §4) | no network isolation; sandbox policies may need an exemption tag |
 | 8 | Local miner | `miner run --local` as labeled fallback only | debugging and policy-blocked tenants | not the hosted requirement |
 
@@ -55,7 +55,7 @@ marked *unverified*. Nothing in this repo fakes a provisioning, inference, agent
    "Needs Storage Blob Data Contributor" for up to 6 min, but never retries network 403s.
 3. **What-if noise.** Foundry accounts show Modify on read-only properties (`currentCapacity`,
    endpoints, a stale `networkInjections` entry). Role assignments named from runtime principal IDs
-   show as *Unsupported*; `contoso infra what-if` collapses them into one note.
+   show as *Unsupported*; `fomo infra what-if` collapses them into one note.
 4. **Embedding endpoint.** The Search embedding skill must target the Foundry account's
    `openai.azure.com` endpoint with the Search MI holding *Cognitive Services OpenAI User*.
 
@@ -98,7 +98,7 @@ Explicitly configured legacy aliases remain supported.
 
 Existing environments are not silently migrated: create the new deployment with approval, update
 `decision_deployment` in the environment/configuration source, and redeploy the hosted miner.
-`contoso env pull` reads saved infrastructure outputs; update those outputs through the normal
+`fomo env pull` reads saved infrastructure outputs; update those outputs through the normal
 infrastructure deployment before using it again, or it can restore the old alias.
 Existing checkpoints, document metadata and evaluation results remain historical. To refresh
 classifications, plan and approve `miner run --hosted --mode all`, then run the smart indexer.

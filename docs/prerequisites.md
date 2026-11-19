@@ -21,7 +21,7 @@ Windows: run `$env:PYTHONIOENCODING='utf-8'` if your console shows encoding erro
 |---|---|---|
 | Resource providers | `Microsoft.CognitiveServices`, `Microsoft.Search`, `Microsoft.Storage` registered | `providers.*` |
 | Region | one region with `gpt-5-mini`, `text-embedding-3-small`, `Microsoft-Decision-1.1` and Foundry hosted agents (tested: **Sweden Central**) | `models.*` |
-| Quota | chat TPM ≥ ~1k × participants; see `contoso capacity` | `capacity.chat-tpm` |
+| Quota | chat TPM ≥ ~1k × participants; see `fomo capacity` | `capacity.chat-tpm` |
 | Search SKU | Basic ≤ 7 participants, S1 ≤ 25, S2 ≤ 100 | `capacity.search` |
 | Policy | no deny on shared-key-free Storage, public endpoint (see [troubleshooting](troubleshooting.md#hosted-networking)) | `policy.*`, `network.hosted-egress` |
 
@@ -40,8 +40,8 @@ PIM: activate eligible roles **before** the session; preflight reports eligible-
 ```powershell
 uv sync
 az login
-uv run contoso preflight --participants 40            # read-only; ~40 s
-uv run contoso preflight --participants 40 --smoke    # + 3 tiny paid model calls
+uv run fomo preflight --participants 40            # read-only; ~40 s
+uv run fomo preflight --participants 40 --smoke    # + 3 tiny paid model calls
 ```
 
 Verdict `READY` / `WARNING` → go. `BLOCKED` → each finding prints the fix; `--fix` plans the

@@ -9,18 +9,25 @@ symptom, then apply the fix.
 |---|---|---|
 | `DefaultAzureCredential failed` / `AzureCliCredential` error | not signed in | `az login`, then `az account set -s <sub>` |
 | `azure.target` BLOCKED | CLI subscription ≠ workshop subscription | `az account set -s <workshop sub>` |
-| `environment incomplete` | no `.workshop/environment.json` | `uv run contoso env pull` or copy the facilitator's file |
+| `connection interrupted` / timeout during an Azure CLI read | temporary connectivity/service failure | supported reads retry twice; after exhaustion check VPN/proxy/connectivity, then rerun the failed check |
+| `azure.resource-group` BLOCKED, `missing: true` | saved group not found in the confirmed subscription | preflight offers re-create empty / choose existing / create another / defer; review `fomo env select ... --plan` and approve before applying |
+| `azure.resource-group` BLOCKED, `missing: null` | access or connectivity could not be verified | fix the reported access/network issue and retry; do not assume the group was deleted or recreate it |
+| `environment incomplete` | no `.workshop/environment.json` | `uv run fomo env pull` or copy the facilitator's file |
 | `UnicodeEncodeError` on Windows | console code page | `$env:PYTHONIOENCODING='utf-8'` |
 | `classifier.yaml still contains TODO` | starter not finished | complete the `criteria` descriptions |
+
+Interrupted **writes** are not automatically replayed: inspect actual state before deciding
+what remains. Re-creating a missing group does not restore its former services or data.
+The saved target is changed only after successful verification; full readiness must be rechecked.
 
 ## 2. Provision / Search
 
 | Symptom | Cause | Fix |
 |---|---|---|
 | 403 on Search REST | role not yet effective (new participant) | wait 2-5 min; `preflight` → `rbac.*` |
-| indexer `transientFailure` / embedding 429 | shared embedding TPM | `uv run contoso status`; re-run `provision --apply` or `smart --reset --apply` |
-| `quota` / "exceeds maximum" | Search object limit | `uv run contoso capacity`; see facilitator runbook §4 |
-| Smart RAG returns nothing | smart indexer still disabled or never re-ran after classification | `uv run contoso smart --apply` |
+| indexer `transientFailure` / embedding 429 | shared embedding TPM | `uv run fomo status`; re-run `provision --apply` or `smart --reset --apply` |
+| `quota` / "exceeds maximum" | Search object limit | `uv run fomo capacity`; see facilitator runbook §4 |
+| Smart RAG returns nothing | smart indexer still disabled or never re-ran after classification | `uv run fomo smart --apply` |
 
 ## 3. Hosted Metadata Miner
 
@@ -48,7 +55,7 @@ Some sandbox subscriptions (e.g. MCAP) attach such a perimeter by policy.
 1. Keep `storageNetworkMode='public'` (default). Storage stays Entra-only (no shared keys).
 2. If policy forces a perimeter, add the exemption tag your policy honors via
    `storagePolicyExemptionTags` (see `infra/parameters/*.bicepparam`), redeploy, and confirm with
-   `uv run contoso preflight` → `network.hosted-egress` PASS.
+   `uv run fomo preflight` → `network.hosted-egress` PASS.
 3. If neither is allowed: run the miner with `--local` (clearly labeled fallback; not the hosted
    requirement) and record the constraint in the session notes.
 

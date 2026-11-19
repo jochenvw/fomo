@@ -35,11 +35,12 @@ from contoso_workshop.miner.pipeline import Miner
 log = logging.getLogger("metadata-miner")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
-PARTICIPANT = os.environ["CONTOSO_PARTICIPANT"]
-CONTAINER = os.environ["CONTOSO_CONTAINER"]
-BLOB_ENDPOINT = os.environ["CONTOSO_BLOB_ENDPOINT"]
-DECISION_ENDPOINT = os.environ["CONTOSO_DECISION_ENDPOINT"]
-DECISION_DEPLOYMENT = os.environ.get("CONTOSO_DECISION_DEPLOYMENT", "decision-1-1")
+PARTICIPANT = os.environ.get("FOMO_PARTICIPANT") or os.environ["CONTOSO_PARTICIPANT"]
+CONTAINER = os.environ.get("FOMO_CONTAINER") or os.environ["CONTOSO_CONTAINER"]
+BLOB_ENDPOINT = os.environ.get("FOMO_BLOB_ENDPOINT") or os.environ["CONTOSO_BLOB_ENDPOINT"]
+DECISION_ENDPOINT = os.environ.get("FOMO_DECISION_ENDPOINT") or os.environ["CONTOSO_DECISION_ENDPOINT"]
+DECISION_DEPLOYMENT = (
+    os.environ.get("FOMO_DECISION_DEPLOYMENT") or os.environ.get("CONTOSO_DECISION_DEPLOYMENT", "decision-1-1"))
 MAX_LIMIT = 500
 
 app = InvocationAgentServerHost()
@@ -51,8 +52,8 @@ def _miner() -> Miner:
         DecisionClient(DECISION_ENDPOINT, DECISION_DEPLOYMENT),
         load_classifier_config(),
         participant=PARTICIPANT,
-        concurrency=int(os.environ.get("CONTOSO_CONCURRENCY", "4")),
-        requests_per_second=float(os.environ.get("CONTOSO_RPS", "5")),
+        concurrency=int(os.environ.get("FOMO_CONCURRENCY") or os.environ.get("CONTOSO_CONCURRENCY", "4")),
+        requests_per_second=float(os.environ.get("FOMO_RPS") or os.environ.get("CONTOSO_RPS", "5")),
         log=lambda msg, **kw: log.info("%s | %s", PARTICIPANT.upper(), msg),
     )
 
