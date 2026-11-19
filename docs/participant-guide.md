@@ -15,6 +15,12 @@ uv run contoso preflight --local-only
 ```
 
 With Copilot CLI: `copilot`, then *"Use the /contoso-preflight skill"*.
+The skill asks you to confirm your Azure directory (tenant), then subscription, then resource
+group before checking Azure readiness. It remembers the confirmed target locally in the
+gitignored `.workshop/environment.json` for the workshop and verifies it on later calls.
+If the CLI context or configured target changes, it asks again; confirmation does not approve
+provisioning. Missing environment configuration means Azure readiness has not yet been assessed,
+not that the Azure resources are necessarily absent.
 
 ## 1. Baseline: Simple RAG (10 min)
 

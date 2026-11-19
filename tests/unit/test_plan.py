@@ -5,8 +5,8 @@ import io
 import pytest
 
 from contoso_workshop import plan as plan_mod
-from contoso_workshop.errors import ApprovalDeclined, WorkshopError
-from contoso_workshop.plan import Plan, confirm, mode_from_flags
+from contoso_workshop.errors import ApprovalDeclined, ConfigError, WorkshopError
+from contoso_workshop.plan import Plan, confirm, mode_from_flags, verify_context
 
 
 def _plan(*states, destructive=False):
@@ -88,3 +88,17 @@ def test_destructive_requires_typed_delete(monkeypatch, capsys, answer, ok):
         with pytest.raises(ApprovalDeclined):
             confirm(p, yes=False)
     assert "Type 'DELETE'" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("tenant", ["matching", "different", "legacy"])
+def test_verify_context_checks_saved_tenant(monkeypatch, env, tenant):
+    account = {"id": env.subscription_id, "tenantId": env.tenant_id, "state": "Enabled"}
+    monkeypatch.setattr(plan_mod, "az", lambda *args, **kwargs: account)
+    if tenant == "different":
+        account["tenantId"] = "other-tenant"
+        with pytest.raises(ConfigError, match="workshop environment targets"):
+            verify_context(env)
+    else:
+        if tenant == "legacy":
+            env.tenant_id = ""
+        assert verify_context(env)["tenant"] == account["tenantId"]

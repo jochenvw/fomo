@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
 from contoso_workshop import cli
+from contoso_workshop.config import Environment
 
 
 @pytest.mark.parametrize(
@@ -73,3 +75,28 @@ def test_capacity_command_exit_codes(capsys):
     data = json.loads(capsys.readouterr().out)
     assert data["fits"] is True
     assert data["participants_max"] == 100
+
+
+@pytest.mark.parametrize("explicit_subscription", [False, True])
+def test_env_pull_remembers_target_subscription_tenant(monkeypatch, tmp_path, explicit_subscription):
+    monkeypatch.chdir(tmp_path)
+    sub = "target-sub" if explicit_subscription else "active-sub"
+    calls = []
+
+    def az(*args):
+        calls.append(args)
+        if args == ("account", "show"):
+            return {"id": "active-sub", "tenantId": "active-tenant"}
+        if args == ("account", "show", "--subscription", sub):
+            return {"id": sub, "tenantId": "target-tenant"}
+        assert args == ("deployment", "group", "show", "-g", "rg", "-n", "workshop", "--subscription", sub)
+        return {"properties": {"outputs": {"FOUNDRY_ACCOUNT_NAME": {"value": "foundry"}}}}
+
+    monkeypatch.setattr("contoso_workshop.azclient.az", az)
+    ctx = SimpleNamespace(env=Environment(subscription_id=sub if explicit_subscription else "", resource_group="rg"))
+    result = cli._env_pull(ctx, "workshop")
+    saved = Environment.load(env_file=Path(result["path"]), environ={})
+    assert (saved.tenant_id, saved.subscription_id, saved.resource_group) == ("target-tenant", sub, "rg")
+    assert saved.foundry_account_name == "foundry"
+    assert ctx.env.to_dict() == saved.to_dict()
+    assert len(calls) == 3

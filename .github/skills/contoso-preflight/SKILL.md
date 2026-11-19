@@ -9,28 +9,90 @@ license: MIT
 Thin wrapper over the deterministic CLI. Never re-implement checks in prose and never change
 Azure state from this skill without the user's explicit yes.
 
-## 1. Run the read-only check
+## 1. Confirm and remember the Azure target
+
+Before Azure checks, confirm **directory (tenant) -> subscription -> resource group**, in
+that order. Never infer the workshop target from a successful sign-in or an enabled subscription.
+Use read-only discovery; do not switch Azure CLI context or provision anything automatically.
+For `--local-only`, skip this step and explicitly say Azure readiness is not assessed.
+
+1. **Directory:** run `az account show --output json`. Show the directory name when available
+   and `tenantId`, and ask the caller to confirm this is the workshop directory. If signed out
+   or wrong, have them run `az login --tenant <tenant-id>`, then inspect and confirm again.
+2. **Subscription:** only after directory confirmation, list enabled subscriptions in that
+   tenant with `az account list --output json` (filter locally by the confirmed `tenantId`).
+   Show names and IDs, identify the active subscription and ask which is the workshop target.
+   If different, have the caller run `az account set --subscription <sub-id>`.
+   Re-read `az account show` and verify both IDs before continuing.
+3. **Resource group:** only after subscription confirmation, run
+   `az group list --subscription <sub-id> --output json`. Show names and locations and ask
+   the caller to confirm the workshop group. Do not select the first or only result silently.
+   Validate it with `az group show --subscription <sub-id> --name <rg> --output json`.
+   If discovery is denied, ask for the facilitator's exact target; access remains unverified.
+
+Use the question/confirmation tool for each decision and wait for an explicit answer.
+Confirmation of a target is **not** approval to deploy, grant roles, register providers or spend.
+
+**Local workshop memory:** reuse the gitignored `.workshop/environment.json`, not Copilot
+long-term memory. After the three confirmations, save `tenant_id`, `subscription_id` and
+`resource_group`, plus the same three-value object under `extra.confirmed_azure_context`.
+Preserve unrelated configuration when the target is unchanged. For a different target,
+explain that resource endpoints must be refreshed and save a fresh environment containing
+only the confirmed target and confirmation object; never retain the previous target's resources.
+Do not store tokens, credentials or user identity. Keep `.workshop/participant.json` as the
+existing hackername memory; do not change it during target selection.
+
+On later calls, read this saved confirmation and `uv run contoso env show`, compare the
+resolved target (including environment-variable/flag overrides) with it, and verify the active
+CLI tenant/subscription and resource group's subscription. If all match, show the remembered
+target briefly and reuse it without repeating questions. If anything differs, is unconfirmed,
+or cannot be verified, stop Azure operations and repeat the relevant confirmations in order;
+never silently overwrite or follow a changed CLI default.
+
+If workshop resource configuration is missing, use the confirmed target:
+
+```
+uv run contoso env pull --subscription <sub-id> --resource-group <rg>
+```
+
+This reads deployment outputs and writes local configuration; it does not provision Azure
+resources. After a successful pull, restore `extra.confirmed_azure_context` in the resulting
+file and verify its three target fields still match. If no successful workshop deployment
+exists, keep the confirmed target locally and direct the facilitator/admin to provision it
+through the existing approval workflow. Alternatively, the facilitator can provide the
+environment file; validate its target and record the caller's confirmation before using it.
+
+## 2. Run the read-only check
 
 From the repository root:
 
 ```
-uv run contoso preflight --participants <N>
+uv run contoso preflight --participants <N> --participant <hackername>
 ```
 
 - `<N>`: expected number of participants (ask if unknown; default 1 for a personal check).
+- Use the supplied or remembered hackername; omit `--participant` only if none is known.
 - Add `--smoke` only if the user agrees to 3 tiny paid model calls (< $0.001).
 - Add `--local-only` if Azure login is not yet possible.
-- If the environment file is missing: `uv run contoso env pull --resource-group <rg>` (read-only).
+- If the environment file is missing/incomplete, complete step 1 before Azure checks.
 
 Exit code: 0 = PASS/WARNING, 2 = at least one BLOCKED, 1 = tool error.
 
-## 2. Explain the result
+## 3. Explain the result
 
 Summarise per category: count of PASS / WARNING / BLOCKED. For every BLOCKED and WARNING item
 quote the `fix` line and say **who must act** (participant, facilitator or admin). Do not soften
 BLOCKED into success. Point to the scrubbed report
 `.workshop/preflight/readiness-<timestamp>.shareable.json` (IDs and users masked) as the file to
 send to the facilitator; the unscrubbed report stays local.
+
+If `azure.environment` is BLOCKED, explain **missing configuration; Azure readiness not yet
+assessed**, not "Azure resources are missing". The checker returns early: resource existence,
+RBAC, model availability, policy, networking and capacity are unknown, and `capacity: {}`
+means unassessed. Resolve the configuration using step 1 and rerun full preflight before
+claiming readiness. Likewise, sign-in and subscription PASS alone do not establish access.
+The optional Bicep warning belongs to the facilitator and does not prevent participants
+from using already-provisioned infrastructure.
 
 For every missing resource, include the matching `rbac.provision-*` check: Storage accounts,
 Foundry accounts/projects/connections and model deployments, Search services and participant
@@ -55,7 +117,7 @@ hosted agent its container/account roles. A management-plane Contributor role do
 grant data-plane access. Missing roles must be granted by the facilitator/admin, not by
 this skill; scoped/conditional RBAC and functional read-only probes remain separate evidence.
 
-## 3. Optional remediation (approval required)
+## 4. Optional remediation (approval required)
 
 Only the safe, participant-level fixes are automated by `preflight --fix`
 (environment pull, provider registration):

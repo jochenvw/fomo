@@ -20,8 +20,16 @@ the user asked for cleanup.
 
 ## Steps
 
+Before any step, follow "Confirm and remember the Azure target" in
+`../contoso-preflight/SKILL.md`: confirm directory, then subscription, then resource group.
+Reuse `.workshop/environment.json` and its `extra.confirmed_azure_context` only after checking
+the resolved configuration and live Azure CLI context still match. Context drift requires
+reconfirmation, not an automatic subscription switch. Target confirmation is not write approval.
+
 1. Readiness (read-only): `uv run contoso status --participant <hackername>`. If the
-   environment is missing: `uv run contoso env pull --resource-group <rg>`.
+   environment is missing/incomplete, pull it with the confirmed subscription and resource
+   group as described in the preflight skill, then rerun full preflight. Missing configuration
+   means Azure readiness is unassessed; it does not prove resources are missing.
 2. Baseline: `uv run contoso provision --participant <hackername>`
    (omit `--participant` to get a generated name; pass it explicitly so plan and apply match).
    Result: queryable raw index, Simple RAG agent with a cited smoke-test answer, starter in

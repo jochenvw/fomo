@@ -546,6 +546,7 @@ def _env_pull(ctx: Ctx, deployment: str | None) -> dict[str, Any]:
         raise WorkshopError("--resource-group is required", fix="the facilitator shares the RG name")
     acct = az("account", "show")
     sub = env.subscription_id or acct["id"]
+    target = az("account", "show", "--subscription", sub)
     if deployment is None:
         deps = az("deployment", "group", "list", "-g", env.resource_group, "--subscription", sub, "-o", "json")
         deps = [d for d in deps if (d.get("properties") or {}).get("provisioningState") == "Succeeded"
@@ -558,7 +559,8 @@ def _env_pull(ctx: Ctx, deployment: str | None) -> dict[str, Any]:
         deployment = deps[0]["name"]
     dep = az("deployment", "group", "show", "-g", env.resource_group, "-n", deployment, "--subscription", sub)
     pulled = Environment.from_bicep_outputs(dep["properties"].get("outputs") or {}, subscription_id=sub,
-                                            resource_group=env.resource_group, deployment_name=deployment)
+                                            tenant_id=target["tenantId"], resource_group=env.resource_group,
+                                            deployment_name=deployment)
     path = pulled.save()
     ctx.env = pulled
     return {"path": str(path), "deployment": deployment, "missing": pulled.missing()}

@@ -229,6 +229,15 @@ def azure_checks(report: Report, env: Environment, *, participant: str | None, s
     report.sensitive.update(s for s in (acct.get("name"), user.get("name"), acct.get("tenantDisplayName")) if s)
     report.add("azure.login", "azure-context", "Azure CLI sign-in", PASS,
                f"{user.get('type')} {user.get('name')} in tenant {acct.get('tenantId')}")
+    if env.tenant_id:
+        tenant_match = acct.get("tenantId") == env.tenant_id
+        report.add("azure.tenant", "azure-context", "CLI directory == workshop directory",
+                   PASS if tenant_match else BLOCKED,
+                   f"az: {acct.get('tenantId')}; workshop: {env.tenant_id}",
+                   "" if tenant_match else
+                   f"`az login --tenant {env.tenant_id}` then `az account set -s {env.subscription_id}`")
+        if not tenant_match:
+            return
     sub_ok = acct.get("state") == "Enabled"
     report.add("azure.subscription", "azure-context", "Subscription", PASS if sub_ok else BLOCKED,
                f"{acct.get('name')} ({acct.get('id')}) state={acct.get('state')}",

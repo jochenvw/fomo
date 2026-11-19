@@ -96,6 +96,24 @@ def test_good_skill_with_crlf(tmp_path: Path):
     assert _skill_ok(path)
 
 
+@pytest.mark.parametrize("matching", [False, True])
+def test_azure_tenant_checked_before_incomplete_environment(monkeypatch, env, matching):
+    env.foundry_account_name = ""
+    account = {"id": env.subscription_id, "tenantId": env.tenant_id if matching else "other-tenant",
+               "state": "Enabled"}
+    az = Mock(return_value=account)
+    monkeypatch.setattr(preflight, "az", az)
+    report = Report("now", 1)
+    preflight.azure_checks(report, env, participant=None, smoke=False)
+    checks = {c.id: c for c in report.checks}
+    assert checks["azure.tenant"].status == (PASS if matching else BLOCKED)
+    assert ("azure.environment" in checks) is matching
+    assert "azure.target" not in checks
+    if not matching:
+        assert f"az login --tenant {env.tenant_id}" in checks["azure.tenant"].fix
+    assert az.call_count == 1
+
+
 @pytest.mark.parametrize("allowed", [True, False, None])
 @pytest.mark.parametrize("resource", ["storage", "project", "model-chat", "container", "cosmic-wombat-raw"])
 def test_missing_resource_creation_readiness(monkeypatch, env, names, resource, allowed):

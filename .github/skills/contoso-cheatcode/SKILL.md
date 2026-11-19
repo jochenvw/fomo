@@ -10,6 +10,13 @@ Not a safety bypass: same permission checks, same plan, same confirmation, same 
 
 ## Steps
 
+Before planning, follow "Confirm and remember the Azure target" in
+`../contoso-preflight/SKILL.md`: confirm directory, then subscription, then resource group.
+Reuse the locally saved confirmation only after checking the resolved environment and live
+Azure CLI context match. Reconfirm any drift; never silently change subscriptions.
+Pull missing environment configuration for that confirmed target and rerun full preflight.
+Target confirmation does not approve any of the paid/write actions below.
+
 1. Plan (read-only): `uv run contoso cheatcode --participant <hackername>`.
 2. Show the full plan to the user, including the cost lines and the two role assignments for
    the hosted agent identity. Ask for an explicit yes.

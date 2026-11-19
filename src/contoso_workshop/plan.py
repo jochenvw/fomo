@@ -69,10 +69,15 @@ class Plan:
 
 
 def verify_context(env: Environment) -> dict[str, Any]:
-    """The signed-in az context must match the configured subscription (checked before every apply)."""
+    """The signed-in az context must match the configured tenant/subscription before every apply."""
     acct = az("account", "show", check=False)
     if not acct:
         raise ConfigError("not signed in to Azure CLI", fix="run `az login` (and `az account set -s <id>`)")
+    if env.tenant_id and acct.get("tenantId") != env.tenant_id:
+        raise ConfigError(
+            f"Azure CLI is in tenant {acct.get('tenantId')}, but the workshop environment targets {env.tenant_id}",
+            fix=f"run `az login --tenant {env.tenant_id}` then `az account set -s {env.subscription_id}`",
+        )
     if env.subscription_id and acct.get("id") != env.subscription_id:
         raise ConfigError(
             f"Azure CLI is on subscription {acct.get('id')} ({acct.get('name')}), but the workshop "
