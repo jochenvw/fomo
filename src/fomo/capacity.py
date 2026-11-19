@@ -41,15 +41,6 @@ AGENT_TOKENS_PER_QUESTION = {"input": 2_900, "output": 1_600}
 
 
 @dataclass
-class SearchFit:
-    sku: str
-    replicas_or_partitions: int
-    participants_max: int
-    binding_object: str
-    fits: bool
-
-
-@dataclass
 class CapacityReport:
     participants: int
     search_sku: str

@@ -4,8 +4,8 @@ import json
 
 import pytest
 
-from contoso_workshop.data.corpus import CORPUS_DIR, MANIFEST, load_ground_truth, load_manifest, verify_corpus
-from contoso_workshop.data.extract import extract
+from fomo.data.corpus import CORPUS_DIR, MANIFEST, load_ground_truth, load_manifest, verify_corpus
+from fomo.data.extract import extract
 
 VERSION, DOCS = load_manifest()
 BY_ID = {d.doc_id: d for d in DOCS}

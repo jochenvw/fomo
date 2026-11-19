@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from contoso_workshop.provision.participant import render_status, stage_of
+from fomo.provision.participant import render_status, stage_of
 
 ALL_AGENTS = {"simple_rag": {"exists": True}, "metadata_miner": {"exists": True}, "smart_rag": {"exists": True}}
 

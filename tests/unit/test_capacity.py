@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from contoso_workshop.capacity import (
+from fomo.capacity import (
     capacity_report,
     cost_estimate,
     max_participants,

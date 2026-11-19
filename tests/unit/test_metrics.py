@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from contoso_workshop.evaluation.metrics import (
+from fomo.evaluation.metrics import (
     classification_scores,
     distinct_docs,
     false_exclusions,

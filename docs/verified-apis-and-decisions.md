@@ -33,7 +33,7 @@ marked *unverified*. Nothing in this repo fakes a provisioning, inference, agent
 | Hosted agent delete | `agents.delete(name, force=True)` | without `force`: 409 when sessions exist |
 | Copilot skills | `.github/skills/<name>/SKILL.md` with `name`, `description` frontmatter | `copilot skill list` shows all three |
 
-## 3. Decisions (goal §11)
+## 3. Decisions
 
 | # | Choice | Decision | Why | Trade-off |
 |---|---|---|---|---|
@@ -82,7 +82,7 @@ Full report: [`examples/sample-evaluation.md`](../examples/sample-evaluation.md)
 | Dynamic per-question filters in the prompt agent | not implemented (agent tool filter is static) |
 | Real 40-person load test | not run; capacity math verified + 4 participants coexisting in the same services |
 | `reuse-existing.bicep` against a customer-owned estate | builds and what-ifs; not deployed into a separate estate |
-| OCR, entity extraction, event-driven ingest, CI/CD for infra | non-goals (goal §11); possible extensions |
+| OCR, entity extraction, event-driven ingest, CI/CD for infra | non-goals; possible extensions |
 
 ## 7. Decision 1.1 upgrade
 

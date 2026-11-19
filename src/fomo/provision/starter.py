@@ -30,13 +30,13 @@ prints per-option probabilities, writes nothing to Blob storage.
 import sys
 from pathlib import Path
 
-from contoso_workshop.config import Environment
-from contoso_workshop.data.corpus import CORPUS_DIR, load_manifest
-from contoso_workshop.data.extract import extract
-from contoso_workshop.decision.client import DecisionClient, build_state
-from contoso_workshop.decision.config import load_classifier_config
-from contoso_workshop.decision.policy import apply_policy
-from contoso_workshop.errors import ConfigError
+from fomo.config import Environment
+from fomo.data.corpus import CORPUS_DIR, load_manifest
+from fomo.data.extract import extract
+from fomo.decision.client import DecisionClient, build_state
+from fomo.decision.config import load_classifier_config
+from fomo.decision.policy import apply_policy
+from fomo.errors import ConfigError
 
 HERE = Path(__file__).resolve().parent
 try:

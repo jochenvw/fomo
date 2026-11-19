@@ -1,15 +1,18 @@
 # FOMO: Foundry Organizes Metadata. Occasionally.
 
+```text
+  ███████╗ ██████╗ ███╗   ███╗ ██████╗      [o_o]
+  ██╔════╝██╔═══██╗████╗ ████║██╔═══██╗     /|_|\   Foundry
+  █████╗  ██║   ██║██╔████╔██║██║   ██║      / \    Organizes
+  ██╔══╝  ██║   ██║██║╚██╔╝██║██║   ██║             Metadata.
+  ██║     ╚██████╔╝██║ ╚═╝ ██║╚██████╔╝             Occasionally.
+  ╚═╝      ╚═════╝ ╚═╝     ╚═╝ ╚═════╝
+```
+
 FOMO is an experimental **metadata-agent workshop**, not a promise that enrichment makes every
 answer better. Build it, measure it, and find out when it helps or hurts. The name is deliberately
 less confident than the demo: **Contoso Oil** is the fictional shop supplying the documents,
 not the name of the toolkit.
-
-```text
-  [o_o]  FOMO
-  /|_|\  Foundry Organizes Metadata.
-   / \   Occasionally.
-```
 
 A 60-minute hands-on workshop on **Microsoft Foundry** + **Azure AI Search**. Participants see a
 plain RAG agent cite the wrong documents, build a hosted **Metadata Miner** that classifies
@@ -30,7 +33,7 @@ non-contract questions; the evaluation reports that honestly
 ## 1. Five-minute start
 
 ```powershell
-git clone <this repo>; cd <repo>
+git clone https://github.com/jochenvw/fomo; cd fomo
 uv sync                                  # Python 3.11+, installed by uv
 az login
 uv run fomo env pull --subscription <sub-id> --resource-group <rg>   # or use the facilitator's .workshop/environment.json
@@ -76,8 +79,7 @@ Participant names are already customer-neutral and stay stable so status, reruns
 still find existing assets. Saved resource names/endpoints are not renamed or migrated.
 Before redeploying older infrastructure, keep its original `prefix`, `projectName` and
 `searchConnectionName` in your parameters and review the plan; new defaults create new names.
-`contoso` remains a compatibility CLI alias, `CONTOSO_*` overrides still work (`FOMO_*` wins),
-and Python imports remain `contoso_workshop`. Recorded sample reports may retain legacy labels.
+Recorded sample reports may retain pre-FOMO labels.
 
 ## 2. Facilitator
 

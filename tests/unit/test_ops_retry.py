@@ -4,9 +4,9 @@ from typing import ClassVar
 
 import pytest
 
-from contoso_workshop.errors import AgentError
-from contoso_workshop.provision import ops
-from contoso_workshop.telemetry.logging import RunLogger
+from fomo.errors import AgentError
+from fomo.provision import ops
+from fomo.telemetry.logging import RunLogger
 
 
 class FakeHosted:

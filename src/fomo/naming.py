@@ -64,7 +64,7 @@ def validate_hackername(name: str) -> None:
 
 @dataclass(frozen=True)
 class ParticipantNames:
-    """All logical resource names for one participant (goal.md §2 manifest)."""
+    """All logical resource names for one participant ."""
 
     hackername: str
 

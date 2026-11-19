@@ -106,7 +106,7 @@ var searchServiceName = empty(searchServiceNameOverride) ? toLower('${prefix}-sr
 var tags = {
   workshop: 'fomo'
   event: eventId
-  managedBy: 'fomo-workshop-cli'
+  managedBy: 'fomo-cli'
 }
 
 module foundry 'modules/foundry.bicep' = {

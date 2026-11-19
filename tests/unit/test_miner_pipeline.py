@@ -6,12 +6,12 @@ from types import SimpleNamespace
 import pytest
 from azure.core.exceptions import ResourceNotFoundError
 
-from contoso_workshop.data.blob import SKIP_PREFIXES, BlobInfo, merge_metadata
-from contoso_workshop.data.corpus import sha256_bytes
-from contoso_workshop.decision.client import DecisionResult
-from contoso_workshop.decision.config import load_classifier_config
-from contoso_workshop.errors import PermissionDenied
-from contoso_workshop.miner.pipeline import CHECKPOINT_BLOB, Miner, classification_metadata, is_current
+from fomo.data.blob import SKIP_PREFIXES, BlobInfo, merge_metadata
+from fomo.data.corpus import sha256_bytes
+from fomo.decision.client import DecisionResult
+from fomo.decision.config import load_classifier_config
+from fomo.errors import PermissionDenied
+from fomo.miner.pipeline import CHECKPOINT_BLOB, Miner, classification_metadata, is_current
 
 
 @pytest.fixture

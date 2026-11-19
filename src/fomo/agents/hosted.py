@@ -22,7 +22,7 @@ from ..config import Environment
 from ..errors import AgentError, WorkshopError
 from ..naming import ParticipantNames
 
-PKG_ROOT = Path(__file__).resolve().parents[1]  # src/contoso_workshop
+PKG_ROOT = Path(__file__).resolve().parents[1]  # src/fomo
 APP_DIR = Path(__file__).resolve().parent / "miner_app"
 RUNTIME = "python_3_13"
 PROTOCOL = ("invocations", "2.0.0")
@@ -58,12 +58,12 @@ def build_zip(classifier_yaml: Path | None = None) -> tuple[bytes, str]:
         ("main.py", (APP_DIR / "main.py").read_bytes()),
         ("requirements.txt", (APP_DIR / "requirements.txt").read_bytes()),
     ]
-    entries += [(f"contoso_workshop/{rel}", (PKG_ROOT / rel).read_bytes()) for rel in VENDORED]
+    entries += [(f"fomo/{rel}", (PKG_ROOT / rel).read_bytes()) for rel in VENDORED]
     if classifier_yaml is not None:
         from ..decision.config import load_classifier_config
 
         load_classifier_config(classifier_yaml)
-        target = "contoso_workshop/decision/reference_classifier.yaml"
+        target = "fomo/decision/reference_classifier.yaml"
         entries = [(n, classifier_yaml.read_bytes() if n == target else d) for n, d in entries]
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:

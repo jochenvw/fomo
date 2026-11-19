@@ -4,9 +4,9 @@ import io
 
 import pytest
 
-from contoso_workshop import plan as plan_mod
-from contoso_workshop.errors import ApprovalDeclined, ConfigError, WorkshopError
-from contoso_workshop.plan import Plan, confirm, mode_from_flags, verify_context
+from fomo import plan as plan_mod
+from fomo.errors import ApprovalDeclined, ConfigError, WorkshopError
+from fomo.plan import Plan, confirm, mode_from_flags, verify_context
 
 
 def _plan(*states, destructive=False):

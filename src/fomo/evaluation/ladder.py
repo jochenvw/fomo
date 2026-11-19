@@ -54,7 +54,6 @@ SPLITS = ("dev", "test")
 VARIANTS = ("simple", "smart_nofilter", "smart_contract", "smart_routed", "smart_oracle")
 JUDGE_METRICS = ("response_completeness", "groundedness")
 K = 5
-CHUNKS = 20
 MIN_FACT_CHARS = 4
 NO_CITATIONS = "(the response cites no documents)"
 EMPTY_RESPONSE = "(empty response)"

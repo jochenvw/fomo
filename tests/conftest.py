@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from contoso_workshop.config import Environment
-from contoso_workshop.naming import ParticipantNames
+from fomo.config import Environment
+from fomo.naming import ParticipantNames
 
 SUB = "00000000-1111-2222-3333-444444444444"
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from contoso_workshop.search.schema import CLASSIFICATION_FIELDS, datasource_definition, participant_definitions
+from fomo.search.schema import CLASSIFICATION_FIELDS, datasource_definition, participant_definitions
 
 
 @pytest.fixture

@@ -10,10 +10,10 @@ from unittest.mock import Mock
 import pytest
 import yaml
 
-from contoso_workshop import rbac
-from contoso_workshop.agents.hosted import APP_DIR, build_zip, environment_variables, required_grants
-from contoso_workshop.decision.config import REFERENCE_CONFIG
-from contoso_workshop.errors import ConfigError
+from fomo import rbac
+from fomo.agents.hosted import APP_DIR, build_zip, environment_variables, required_grants
+from fomo.decision.config import REFERENCE_CONFIG
+from fomo.errors import ConfigError
 
 
 def _names(data):
@@ -26,8 +26,8 @@ def test_build_zip_is_deterministic_and_complete():
     assert (data1, sha1) == (data2, sha2)
     entries = _names(data1)
     assert entries == sorted(entries)
-    assert {"main.py", "requirements.txt", "contoso_workshop/decision/reference_classifier.yaml",
-            "contoso_workshop/miner/pipeline.py", "contoso_workshop/decision/client.py"} <= set(entries)
+    assert {"main.py", "requirements.txt", "fomo/decision/reference_classifier.yaml",
+            "fomo/miner/pipeline.py", "fomo/decision/client.py"} <= set(entries)
     assert not any("search" in e or "preflight" in e or "cli.py" in e for e in entries)
     with zipfile.ZipFile(io.BytesIO(data1)) as zf:
         assert b"\r\n" not in zf.read("main.py")
@@ -41,7 +41,7 @@ def test_build_zip_with_participant_classifier(tmp_path):
     path.write_text(yaml.safe_dump(data), encoding="utf-8")
     zipped, sha = build_zip(path)
     assert sha != build_zip()[1]
-    packaged = zipfile.ZipFile(io.BytesIO(zipped)).read("contoso_workshop/decision/reference_classifier.yaml")
+    packaged = zipfile.ZipFile(io.BytesIO(zipped)).read("fomo/decision/reference_classifier.yaml")
     assert yaml.safe_load(packaged)["version"] == "cosmic-wombat-v2"
 
 
@@ -79,18 +79,9 @@ def test_environment_variables_pin_one_container(env, names):
     assert ev["FOMO_DECISION_ENDPOINT"] == "https://contoso-foundry.openai.azure.com"
 
 
-@pytest.mark.parametrize("prefix", ["FOMO", "CONTOSO", "both"])
-def test_hosted_entrypoint_accepts_new_and_legacy_environment(monkeypatch, env, names, prefix):
-    variables = {key.removeprefix("FOMO_"): value for key, value in environment_variables(env, names).items()
-                 if key.startswith("FOMO_")}
-    for key, value in variables.items():
-        for namespace in ("FOMO", "CONTOSO"):
-            monkeypatch.delenv(f"{namespace}_{key}", raising=False)
-        if prefix == "both":
-            monkeypatch.setenv(f"CONTOSO_{key}", "old-target")
-            monkeypatch.setenv(f"FOMO_{key}", value)
-        else:
-            monkeypatch.setenv(f"{prefix}_{key}", value)
+def test_hosted_entrypoint_reads_deploy_time_environment(monkeypatch, env, names):
+    for key, value in environment_variables(env, names).items():
+        monkeypatch.setenv(key, value)
     host = Mock()
     host.invoke_handler.side_effect = lambda handler: handler
     monkeypatch.setitem(sys.modules, "azure.ai.agentserver.invocations",

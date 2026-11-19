@@ -6,8 +6,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from contoso_workshop import azclient
-from contoso_workshop.errors import WorkshopError
+from fomo import azclient
+from fomo.errors import WorkshopError
 
 
 @pytest.fixture

@@ -6,9 +6,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from contoso_workshop import cli
-from contoso_workshop.config import ENV_FILE, Environment, load_participant, save_participant
-from contoso_workshop.errors import PermissionDenied
+from fomo import cli
+from fomo.config import ENV_FILE, Environment, load_participant, save_participant
+from fomo.errors import PermissionDenied
 
 
 @pytest.mark.parametrize(
@@ -83,10 +83,10 @@ def test_capacity_command_exit_codes(capsys):
 
 @pytest.mark.parametrize("output", ["text", "json"])
 def test_preflight_mascot_is_human_output_only(monkeypatch, tmp_path, capsys, output):
-    from contoso_workshop.preflight import Report
+    from fomo.preflight import Report
 
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr("contoso_workshop.preflight.run_preflight", lambda *args, **kwargs: Report("now", 1))
+    monkeypatch.setattr("fomo.preflight.run_preflight", lambda *args, **kwargs: Report("now", 1))
     assert cli.main(["preflight", "--local-only", "--participants", "1", "--output", output]) == cli.EXIT_OK
     captured = capsys.readouterr()
     if output == "json":
@@ -119,7 +119,7 @@ def test_env_pull_remembers_target_subscription_tenant(monkeypatch, tmp_path, ex
         assert args == ("deployment", "group", "show", "-g", "rg", "-n", "workshop", "--subscription", sub)
         return {"properties": {"outputs": {"FOUNDRY_ACCOUNT_NAME": {"value": "foundry"}}}}
 
-    monkeypatch.setattr("contoso_workshop.azclient.az", az)
+    monkeypatch.setattr("fomo.azclient.az", az)
     ctx = SimpleNamespace(env=Environment(subscription_id=sub if explicit_subscription else "", resource_group="rg"))
     confirmed = {"tenant_id": "target-tenant", "subscription_id": sub, "resource_group": "rg"}
     if confirmation != "none":
@@ -162,8 +162,8 @@ def group_selection(monkeypatch, tmp_path, env):
                     "location": "westeurope"}
         raise AssertionError(f"unexpected Azure operation: {args}")
 
-    monkeypatch.setattr("contoso_workshop.azclient.az", az)
-    monkeypatch.setattr("contoso_workshop.plan.az", az)
+    monkeypatch.setattr("fomo.azclient.az", az)
+    monkeypatch.setattr("fomo.plan.az", az)
     return state
 
 
@@ -211,7 +211,7 @@ def test_env_select_failure_does_not_save(group_selection, env, monkeypatch, fai
     group_selection.exists = failure == "collision"
     argv = [*group_selection.argv, "--create-resource-group", "--location", "westeurope", "--apply", "--yes"]
     if failure == "approval":
-        from contoso_workshop.errors import ApprovalDeclined
+        from fomo.errors import ApprovalDeclined
 
         def decline(*args, **kwargs):
             raise ApprovalDeclined("not approved")

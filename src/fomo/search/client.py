@@ -162,15 +162,3 @@ class SearchClient:
             body["scoringParameters"] = scoring_parameters or []
         data = self._call("POST", f"indexes/{quote(index)}/docs/search", body)
         return list(data.get("value", []))
-
-    def delete_participant(self, names: ParticipantNames) -> list[str]:
-        removed = []
-        for kind, name in (
-            ("indexers", names.raw_indexer), ("indexers", names.smart_indexer),
-            ("skillsets", names.raw_skillset), ("skillsets", names.smart_skillset),
-            ("indexes", names.raw_index), ("indexes", names.smart_index),
-            ("datasources", names.datasource),
-        ):
-            if self.delete(kind, name):
-                removed.append(f"{kind}/{name}")
-        return removed

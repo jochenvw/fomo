@@ -21,8 +21,7 @@ from ..errors import PermissionDenied, WorkshopError
 META_KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,63}$")
 MAX_METADATA_BYTES = 8 * 1024
 
-# Keys owned by the workshop; written on upload (source) or by the miner (classification).
-SOURCE_KEYS = ("doc_id", "title", "source_sha256", "corpus_version", "workshop")
+# Metadata keys written by the miner.
 CLASSIFICATION_KEYS = (
     "document_type",
     "classification_confidence",

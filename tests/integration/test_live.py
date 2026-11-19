@@ -13,13 +13,13 @@ import os
 
 import pytest
 
-from contoso_workshop.config import ENV_FILE, Environment
-from contoso_workshop.data.corpus import CORPUS_DIR, REPO_ROOT, load_manifest
-from contoso_workshop.naming import ParticipantNames, pick_free_hackername
+from fomo.config import ENV_FILE, Environment
+from fomo.data.corpus import CORPUS_DIR, REPO_ROOT, load_manifest
+from fomo.naming import ParticipantNames, pick_free_hackername
 
 pytestmark = [
     pytest.mark.integration,
-    pytest.mark.skipif(os.environ.get("FOMO_LIVE", os.environ.get("CONTOSO_LIVE")) != "1"
+    pytest.mark.skipif(os.environ.get("FOMO_LIVE") != "1"
                        or not (REPO_ROOT / ENV_FILE).exists(),
                        reason="live tests need FOMO_LIVE=1 and .workshop/environment.json"),
 ]
@@ -32,7 +32,7 @@ def live_env() -> Environment:
 
 @pytest.fixture(scope="module")
 def participant() -> ParticipantNames:
-    name = os.environ.get("FOMO_TEST_PARTICIPANT") or os.environ.get("CONTOSO_TEST_PARTICIPANT")
+    name = os.environ.get("FOMO_TEST_PARTICIPANT")
     if not name:
         pytest.skip("set FOMO_TEST_PARTICIPANT to an existing, completed participant")
     names = ParticipantNames(name)
@@ -41,7 +41,7 @@ def participant() -> ParticipantNames:
 
 
 def test_blob_listing_and_metadata(live_env, participant):
-    from contoso_workshop.provision.participant import container_client
+    from fomo.provision.participant import container_client
 
     container = container_client(live_env, participant)
     assert container.exists()
@@ -55,9 +55,9 @@ def test_blob_listing_and_metadata(live_env, participant):
 
 
 def test_decision_choice_call(live_env):
-    from contoso_workshop.data.extract import extract
-    from contoso_workshop.decision.client import DecisionClient, build_state
-    from contoso_workshop.decision.config import load_classifier_config
+    from fomo.data.extract import extract
+    from fomo.decision.client import DecisionClient, build_state
+    from fomo.decision.config import load_classifier_config
 
     cfg = load_classifier_config()
     doc = next(d for d in load_manifest()[1] if d.doc_id == "doc-001")
@@ -70,8 +70,8 @@ def test_decision_choice_call(live_env):
 
 
 def test_smart_index_filter_returns_only_contracts(live_env, participant):
-    from contoso_workshop.agents.prompt import CONTRACT_FILTER
-    from contoso_workshop.search.client import SearchClient
+    from fomo.agents.prompt import CONTRACT_FILTER
+    from fomo.search.client import SearchClient
 
     hits = SearchClient(live_env).query(participant.smart_index, "payment terms and termination",
                                         top=10, filter_=CONTRACT_FILTER, select="doc_id,document_type")
@@ -80,7 +80,7 @@ def test_smart_index_filter_returns_only_contracts(live_env, participant):
 
 
 def test_smart_agent_cites_documents(live_env, participant):
-    from contoso_workshop.agents.prompt import PromptAgents
+    from fomo.agents.prompt import PromptAgents
 
     answer = PromptAgents(live_env).ask(participant.smart_rag_agent,
                                         "Which contracts define payment terms? Cite the documents.")
@@ -89,8 +89,8 @@ def test_smart_agent_cites_documents(live_env, participant):
 
 
 def test_existing_participant_is_detected_as_taken(live_env, participant):
-    from contoso_workshop.provision.participant import container_client
-    from contoso_workshop.search.client import SearchClient
+    from fomo.provision.participant import container_client
+    from fomo.search.client import SearchClient
 
     taken_indexes = set(SearchClient(live_env).list_names("indexes"))
 

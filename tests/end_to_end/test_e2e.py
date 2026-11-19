@@ -13,14 +13,14 @@ import secrets
 
 import pytest
 
-from contoso_workshop import cli
-from contoso_workshop.config import ENV_FILE
-from contoso_workshop.data.corpus import REPO_ROOT
-from contoso_workshop.naming import generate_hackername
+from fomo import cli
+from fomo.config import ENV_FILE
+from fomo.data.corpus import REPO_ROOT
+from fomo.naming import generate_hackername
 
 pytestmark = [
     pytest.mark.e2e,
-    pytest.mark.skipif(os.environ.get("FOMO_E2E", os.environ.get("CONTOSO_E2E")) != "1",
+    pytest.mark.skipif(os.environ.get("FOMO_E2E") != "1",
                        reason="end-to-end tests need FOMO_E2E=1"),
 ]
 

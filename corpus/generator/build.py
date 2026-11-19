@@ -107,7 +107,7 @@ def _normalize_zip(data: bytes) -> bytes:
 
 def build_all() -> dict[str, bytes]:
     """Return {relative path: bytes} for every generated artifact."""
-    from contoso_workshop.data.extract import extract
+    from fomo.data.extract import extract
 
     files: dict[str, bytes] = {}
     manifest_docs = []

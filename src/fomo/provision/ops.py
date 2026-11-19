@@ -7,7 +7,6 @@ the same functions a participant runs step by step; there is no separate demo pa
 
 from __future__ import annotations
 
-import json
 import time
 from datetime import UTC, datetime
 from pathlib import Path
@@ -427,8 +426,4 @@ def links(env: Environment, names: ParticipantNames) -> list[str]:
         f"container: {env.resolved_blob_endpoint()}{names.container}",
         f"logs and traces: {names.run_dir}/",
     ]
-
-
-def dump(obj: Any) -> str:
-    return json.dumps(obj, indent=2, default=str)
 

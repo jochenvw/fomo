@@ -4,7 +4,7 @@
 selecting favorable examples. This page is written before any test-split result exists. Changing
 a rule after seeing test results invalidates the run; start a new dataset version instead.
 
-Command: `uv run fomo eval-ladder` (plan) → `--apply`. Code: `src/contoso_workshop/evaluation/ladder.py`.
+Command: `uv run fomo eval-ladder` (plan) → `--apply`. Code: `src/fomo/evaluation/ladder.py`.
 Dataset: `corpus/rag_eval_v2.json`. Earlier single-run comparison: `fomo eval-foundry` (kept for history).
 
 ## 1. Variants: one change at a time

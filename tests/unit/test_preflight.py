@@ -5,9 +5,9 @@ from unittest.mock import Mock
 
 import pytest
 
-from contoso_workshop import preflight
-from contoso_workshop.errors import PermissionDenied, WorkshopError
-from contoso_workshop.preflight import BLOCKED, INFO, PASS, REPO_ROOT, WARNING, Report, _skill_ok, effective, scrub
+from fomo import preflight
+from fomo.errors import PermissionDenied, WorkshopError
+from fomo.preflight import BLOCKED, INFO, PASS, REPO_ROOT, WARNING, Report, _skill_ok, effective, scrub
 
 PERMS = [
     {"actions": ["*"], "notActions": ["Microsoft.Authorization/*/Write", "Microsoft.Authorization/*/Delete"]},
@@ -285,10 +285,10 @@ def test_participant_resources_inspect_all_objects_without_writing(monkeypatch, 
     monkeypatch.setattr(preflight, "credential", lambda: None)
     container = Mock()
     container.exists.return_value = False
-    monkeypatch.setattr("contoso_workshop.data.blob.ParticipantContainer", lambda *args: container)
+    monkeypatch.setattr("fomo.data.blob.ParticipantContainer", lambda *args: container)
     search = Mock()
     search.get.side_effect = lambda kind, name: {} if name == names.raw_index else None
-    monkeypatch.setattr("contoso_workshop.search.client.SearchClient", lambda *args: search)
+    monkeypatch.setattr("fomo.search.client.SearchClient", lambda *args: search)
     report = Report("now", 1)
     preflight._participant_resources(report, env, names.hackername)
     checks = {c.id: c for c in report.checks}

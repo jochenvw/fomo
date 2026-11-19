@@ -4,7 +4,7 @@
 
 ```powershell
 uv sync --all-groups
-./tasks.ps1 check          # or: make check   (ruff + mypy + offline pytest)
+uv run ruff check src tests corpus/generator; uv run mypy; uv run pytest -q
 ```
 
 ## 2. Rules

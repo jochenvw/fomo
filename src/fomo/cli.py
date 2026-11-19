@@ -50,7 +50,7 @@ def _common(p: argparse.ArgumentParser, *, writes: bool = False) -> None:
 def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(prog="fomo", description="FOMO metadata-agent workshop: preflight, "
                                  "provision, cheatcode and friends.")
-    ap.add_argument("--version", action="version", version=f"fomo-workshop {__version__}")
+    ap.add_argument("--version", action="version", version=f"fomo {__version__}")
     sub = ap.add_subparsers(dest="command", required=True, metavar="command")
 
     p = sub.add_parser("preflight", help="readiness report (read-only unless --fix --apply)")

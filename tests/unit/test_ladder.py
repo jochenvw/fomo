@@ -6,10 +6,10 @@ from unittest.mock import Mock
 
 import pytest
 
-from contoso_workshop.errors import WorkshopError
-from contoso_workshop.evaluation import ladder, stats
-from contoso_workshop.evaluation.metrics import ndcg_at_k
-from contoso_workshop.naming import EVAL_ROUTES, ParticipantNames, validate_agent_name
+from fomo.errors import WorkshopError
+from fomo.evaluation import ladder, stats
+from fomo.evaluation.metrics import ndcg_at_k
+from fomo.naming import EVAL_ROUTES, ParticipantNames, validate_agent_name
 
 
 def _row(**over):

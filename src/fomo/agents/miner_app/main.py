@@ -1,7 +1,7 @@
 """Hosted Metadata Miner entry point (Foundry hosted agent, invocations protocol 2.0.0).
 
-Packaged into the source ZIP by `contoso_workshop.agents.hosted.build_zip` together with the
-`contoso_workshop` modules the miner needs. Same pipeline code as the local developer mode.
+Packaged into the source ZIP by `fomo.agents.hosted.build_zip` together with the
+`fomo` modules the miner needs. Same pipeline code as the local developer mode.
 
 One agent per participant. The target container is fixed by environment variables set at
 deploy time, and the agent identity only holds Storage Blob Data Contributor on that one
@@ -25,22 +25,21 @@ from azure.ai.agentserver.invocations import InvocationAgentServerHost
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
-from contoso_workshop.azclient import credential
-from contoso_workshop.data.blob import ParticipantContainer
-from contoso_workshop.decision.client import DecisionClient
-from contoso_workshop.decision.config import load_classifier_config
-from contoso_workshop.errors import PermissionDenied, WorkshopError
-from contoso_workshop.miner.pipeline import Miner
+from fomo.azclient import credential
+from fomo.data.blob import ParticipantContainer
+from fomo.decision.client import DecisionClient
+from fomo.decision.config import load_classifier_config
+from fomo.errors import PermissionDenied, WorkshopError
+from fomo.miner.pipeline import Miner
 
 log = logging.getLogger("metadata-miner")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
-PARTICIPANT = os.environ.get("FOMO_PARTICIPANT") or os.environ["CONTOSO_PARTICIPANT"]
-CONTAINER = os.environ.get("FOMO_CONTAINER") or os.environ["CONTOSO_CONTAINER"]
-BLOB_ENDPOINT = os.environ.get("FOMO_BLOB_ENDPOINT") or os.environ["CONTOSO_BLOB_ENDPOINT"]
-DECISION_ENDPOINT = os.environ.get("FOMO_DECISION_ENDPOINT") or os.environ["CONTOSO_DECISION_ENDPOINT"]
-DECISION_DEPLOYMENT = (
-    os.environ.get("FOMO_DECISION_DEPLOYMENT") or os.environ.get("CONTOSO_DECISION_DEPLOYMENT", "decision-1-1"))
+PARTICIPANT = os.environ["FOMO_PARTICIPANT"]
+CONTAINER = os.environ["FOMO_CONTAINER"]
+BLOB_ENDPOINT = os.environ["FOMO_BLOB_ENDPOINT"]
+DECISION_ENDPOINT = os.environ["FOMO_DECISION_ENDPOINT"]
+DECISION_DEPLOYMENT = os.environ.get("FOMO_DECISION_DEPLOYMENT", "decision-1-1")
 MAX_LIMIT = 500
 
 app = InvocationAgentServerHost()
@@ -52,8 +51,8 @@ def _miner() -> Miner:
         DecisionClient(DECISION_ENDPOINT, DECISION_DEPLOYMENT),
         load_classifier_config(),
         participant=PARTICIPANT,
-        concurrency=int(os.environ.get("FOMO_CONCURRENCY") or os.environ.get("CONTOSO_CONCURRENCY", "4")),
-        requests_per_second=float(os.environ.get("FOMO_RPS") or os.environ.get("CONTOSO_RPS", "5")),
+        concurrency=int(os.environ.get("FOMO_CONCURRENCY", "4")),
+        requests_per_second=float(os.environ.get("FOMO_RPS", "5")),
         log=lambda msg, **kw: log.info("%s | %s", PARTICIPANT.upper(), msg),
     )
 

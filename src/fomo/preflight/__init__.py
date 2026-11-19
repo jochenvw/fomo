@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from .. import capacity
-from ..azclient import ARM, SCOPE_COGNITIVE, arm, az, bearer, credential, request
+from ..azclient import ARM, SCOPE_COGNITIVE, arm, az, credential, request
 from ..config import Environment
 from ..errors import WorkshopError
 
@@ -313,19 +313,6 @@ def azure_checks(report: Report, env: Environment, *, participant: str | None, s
     else:
         report.add("smoke.models", "models", "Live model calls (chat, embedding, decision)", SKIPPED,
                    "opt-in: `fomo preflight --smoke` makes 3 tiny paid calls (< $0.001)", required=False)
-
-
-def _signed_in_object_id() -> str | None:
-    try:
-        token = bearer("https://management.azure.com/.default")
-        import base64
-        import json
-
-        payload = token.split(".")[1]
-        payload += "=" * (-len(payload) % 4)
-        return str(json.loads(base64.urlsafe_b64decode(payload)).get("oid"))
-    except Exception:
-        return None
 
 
 def _providers(report: Report, sub: str) -> None:

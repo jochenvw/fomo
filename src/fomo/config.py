@@ -1,7 +1,7 @@
 """Workshop configuration.
 
 Precedence (low -> high): YAML config file -> .workshop/environment.json (written from the
-Bicep deployment outputs) -> CONTOSO_* (legacy) -> FOMO_* environment variables -> CLI flags.
+Bicep deployment outputs) -> FOMO_* environment variables -> CLI flags.
 """
 
 from __future__ import annotations
@@ -180,14 +180,7 @@ class Environment:
         if env_file.exists():
             env.apply(json.loads(env_file.read_text(encoding="utf-8")))
         environ = dict(os.environ) if environ is None else environ
-        for prefix in ("CONTOSO", "FOMO"):
-            env.apply(
-                {
-                    name: environ.get(f"{prefix}_{name.upper()}")
-                    for name in cls.field_names()
-                    if environ.get(f"{prefix}_{name.upper()}")
-                }
-            )
+        env.apply({name: environ.get(f"FOMO_{name.upper()}") for name in cls.field_names()})
         if overrides:
             env.apply(overrides)
         return env

@@ -8,9 +8,9 @@ from unittest.mock import Mock
 
 import pytest
 
-from contoso_workshop.agents.prompt import agent_specs
-from contoso_workshop.errors import Blocked, WorkshopError
-from contoso_workshop.evaluation import foundry
+from fomo.agents.prompt import agent_specs
+from fomo.errors import Blocked, WorkshopError
+from fomo.evaluation import foundry
 
 
 def test_seed_dataset_has_real_evidence_and_balanced_scope():

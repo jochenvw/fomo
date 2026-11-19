@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from contoso_workshop.errors import NamingError
-from contoso_workshop.naming import (
+from fomo.errors import NamingError
+from fomo.naming import (
     ParticipantNames,
     generate_hackername,
     normalize_hackername,

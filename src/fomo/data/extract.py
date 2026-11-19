@@ -7,8 +7,6 @@ import re
 from dataclasses import dataclass, field
 from pathlib import PurePosixPath
 
-SUPPORTED = {".pdf", ".pptx", ".txt", ".md"}
-
 
 @dataclass
 class Extraction:

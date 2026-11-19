@@ -9,7 +9,6 @@ import shutil
 import subprocess  # nosec B404 - only fixed `az` argument lists, never shell=True
 import threading
 import time
-from collections.abc import Callable
 from functools import lru_cache
 from typing import Any, TypeVar
 
@@ -26,7 +25,6 @@ SCOPE_ARM = "https://management.azure.com/.default"
 SCOPE_COGNITIVE = "https://cognitiveservices.azure.com/.default"
 SCOPE_FOUNDRY = "https://ai.azure.com/.default"
 SCOPE_SEARCH = "https://search.azure.com/.default"
-SCOPE_STORAGE = "https://storage.azure.com/.default"
 
 TRANSIENT_STATUS = {408, 429, 500, 502, 503, 504}
 
@@ -126,22 +124,6 @@ def http_error(resp: requests.Response, what: str) -> WorkshopError:
     if resp.status_code == 429:
         return Throttled(msg, fix="wait a minute; the facilitator may raise deployment capacity")
     return WorkshopError(msg)
-
-
-def retry_call(fn: Callable[[], T], *, retries: int = 5, is_transient: Callable[[Exception], bool]) -> T:
-    for attempt in range(retries + 1):
-        try:
-            return fn()
-        except Exception as exc:
-            if attempt == retries or not is_transient(exc):
-                raise
-            time.sleep(backoff_delay(attempt))
-    raise AssertionError("unreachable")
-
-
-def azure_sdk_transient(exc: Exception) -> bool:
-    status = getattr(exc, "status_code", None)
-    return status in TRANSIENT_STATUS
 
 
 # ---- Azure CLI ---------------------------------------------------------------

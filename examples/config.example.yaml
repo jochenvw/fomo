@@ -5,7 +5,7 @@
 # Use this file for reuse-existing setups or to point at another environment:
 #   uv run fomo status --config examples/config.example.yaml
 #
-# Precedence (low -> high): this file -> .workshop/environment.json -> CONTOSO_* (legacy) -> FOMO_* -> CLI flags.
+# Precedence (low -> high): this file -> .workshop/environment.json -> FOMO_* -> CLI flags.
 environment:
   subscription_id: 00000000-0000-0000-0000-000000000000
   resource_group: rg-fomo-dev

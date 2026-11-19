@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import pytest
 
-from contoso_workshop.data.blob import MAX_METADATA_BYTES, merge_metadata, validate_metadata
-from contoso_workshop.data.corpus import CorpusDocument
-from contoso_workshop.data.ingest import ascii_metadata, source_metadata
-from contoso_workshop.errors import WorkshopError
+from fomo.data.blob import MAX_METADATA_BYTES, merge_metadata, validate_metadata
+from fomo.data.corpus import CorpusDocument
+from fomo.data.ingest import ascii_metadata, source_metadata
+from fomo.errors import WorkshopError
 
 
 def test_validate_metadata_accepts_workshop_keys():

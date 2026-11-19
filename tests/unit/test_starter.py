@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-from contoso_workshop.decision.config import load_classifier_config
-from contoso_workshop.errors import ConfigError
-from contoso_workshop.provision.starter import write_starter
+from fomo.decision.config import load_classifier_config
+from fomo.errors import ConfigError
+from fomo.provision.starter import write_starter
 
 
 @pytest.fixture

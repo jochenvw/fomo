@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 
-from contoso_workshop.telemetry.logging import JsonLineFormatter, redact, redact_obj, write_trace
+from fomo.telemetry.logging import JsonLineFormatter, redact, redact_obj, write_trace
 
 JWT = "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.c2lnbmF0dXJl"
 
