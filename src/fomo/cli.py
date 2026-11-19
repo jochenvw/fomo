@@ -1,4 +1,4 @@
-"""`fomo` command line (`contoso` is a compatibility alias). Also works without Copilot.
+"""`fomo` command line. Also works without Copilot.
 
 Write semantics (every write command):
   default / --plan / --dry-run  show the itemized plan, change nothing
@@ -151,6 +151,11 @@ def build_parser() -> argparse.ArgumentParser:
     q.add_argument("--tenant", required=True, help="confirmed directory (tenant) id")
     q.add_argument("--create-resource-group", action="store_true", help="create only the named empty resource group")
     q.add_argument("--location", help="required when creating a resource group")
+    q = esub.add_parser("discover", help="adopt Foundry/Storage/Search already in the confirmed resource group")
+    _common(q, writes=True)
+    q.add_argument("--foundry-account", help="choose when the group has several Foundry accounts")
+    q.add_argument("--storage-account", help="choose when the group has several storage accounts")
+    q.add_argument("--search-service", help="choose when the group has several Search services")
 
     p = sub.add_parser("agents", help="talk to your prompt agents")
     asub = p.add_subparsers(dest="agents_command", required=True, metavar="action")
@@ -198,8 +203,8 @@ class Ctx:
         missing = self.env.missing()
         if missing:
             raise WorkshopError(f"workshop environment incomplete: {', '.join(missing)}",
-                                fix="run `uv run fomo env pull --resource-group <rg>` (facilitator shares it) "
-                                "or pass --config")
+                                fix="run `uv run fomo preflight`: it inspects the confirmed resource group and "
+                                "names the next step (`env discover`, `env pull` or a request to IT)")
 
     def names(self, *, allow_new: bool = False) -> ParticipantNames:
         from .provision.participant import resolve_participant
@@ -290,8 +295,9 @@ def _preflight_fix(ctx: Ctx, report: Any) -> int:
     plan = Plan("preflight --fix", None, ctx.env.subscription_id, ctx.env.resource_group)
     actions: list[Callable[[], Any]] = []
     blocked = [c for c in report.checks if c.status in ("BLOCKED", "WARNING")]
+    discovery = next((c for c in report.checks if c.id == "azure.discovery"), None)
     for c in blocked:
-        if c.id == "azure.environment" and ctx.env.resource_group:
+        if c.id == "azure.environment" and ctx.env.resource_group and discovery and discovery.data.get("deployment"):
             plan.add("write", str(ENV_FILE), f"env pull from resource group {ctx.env.resource_group}")
             actions.append(lambda: _env_pull(ctx, None))
         elif c.id.startswith("providers.") and c.status == "BLOCKED":
@@ -637,10 +643,57 @@ def _env_pull(ctx: Ctx, deployment: str | None) -> dict[str, Any]:
     return {"path": str(path), "deployment": deployment, "missing": pulled.missing()}
 
 
+def _env_discover(ctx: Ctx) -> int:
+    from .discover import adopt_deployments, advise, inventory, resolve
+
+    args, env = ctx.args, ctx.env
+    target = {"tenant_id": env.tenant_id, "subscription_id": env.subscription_id,
+              "resource_group": env.resource_group}
+    if not all(target.values()) or env.extra.get("confirmed_azure_context") != target:
+        raise Blocked("no confirmed Azure target for discovery",
+                      fix="confirm tenant, subscription and resource group with `uv run fomo env select ... --plan`")
+    choices = {"foundry": args.foundry_account, "project": args.project, "storage": args.storage_account,
+               "search": args.search_service}
+
+    def discover() -> tuple[Any, dict[str, Any], dict[str, str]]:
+        inv = inventory(env.subscription_id, env.resource_group)
+        fields, problems = resolve(inv, choices)
+        return inv, fields, problems
+
+    inv, fields, problems = discover()
+    if inv.deployment or problems:
+        fix, owner = advise(env, inv, problems, None)
+        detail = "; ".join(f"{r}: {p}" for r, p in problems.items()) or f"FOMO deployment {inv.deployment}"
+        raise Blocked(f"{inv.summary()} -> {detail}", fix=fix, owner=owner)
+    notes = adopt_deployments(env, fields)
+    plan = Plan("env discover", None, env.subscription_id, env.resource_group)
+    plan.notes += [f"found: {inv.summary()}", *notes,
+                   "read-only towards Azure: nothing is created, changed or granted"]
+    adopted = ", ".join(f"{k}={v}" for k, v in fields.items() if k.endswith(("_name", "_deployment")))
+    plan.add("write", str(ENV_FILE), adopted)
+
+    def apply() -> dict[str, Any]:
+        _, again, still = discover()
+        names = {k: v for k, v in fields.items() if k.endswith("_name")}
+        if still or any(again.get(k) != v for k, v in names.items()):
+            raise Blocked("resource group changed since the plan; nothing saved", fix="rerun with --plan")
+        saved = Environment.load(environ={})
+        for key, value in fields.items():
+            setattr(saved, key, value)
+        path = saved.save()
+        ctx.env = saved
+        return {"path": str(path), "adopted": fields, "missing": saved.missing()}
+
+    return write_flow(ctx, plan, apply, after=lambda r: f"saved discovered services to {r['path']}\n"
+                      "next: uv run fomo preflight --participants 1 --participant <hackername>")
+
+
 def cmd_env(args: argparse.Namespace) -> int:
     ctx = Ctx(args, "env")
     if args.env_command == "select":
         return _env_select(ctx)
+    if args.env_command == "discover":
+        return _env_discover(ctx)
     if args.env_command == "pull":
         r = _env_pull(ctx, args.deployment)
         ctx.out(f"wrote {r['path']} from deployment {r['deployment']}"

@@ -36,7 +36,8 @@ non-contract questions; the evaluation reports that honestly
 git clone https://github.com/jochenvw/fomo; cd fomo
 uv sync                                  # Python 3.11+, installed by uv
 az login
-uv run fomo env pull --subscription <sub-id> --resource-group <rg>   # or use the facilitator's .workshop/environment.json
+uv run fomo env pull --subscription <sub-id> --resource-group <rg>   # FOMO Bicep deployment, or:
+uv run fomo env discover --plan          # adopt IT-provisioned Foundry/Storage/Search in the confirmed group
 ```
 
 Every command **plans first** and changes nothing; add `--apply` (and `--yes` for non-interactive).

@@ -40,7 +40,9 @@ retry safe reads, offer approved target-recovery choices, and inspect uncertain 
 
 1. Readiness (read-only): `uv run fomo status --participant <hackername>`. If the
    environment is missing/incomplete, follow the preflight skill's existing/new-group branch
-   (do not pull deployment outputs from a new empty group), then rerun full preflight. Missing configuration
+   (do not pull deployment outputs from a new empty group), then rerun full preflight. A saved group
+   with IT-provisioned services is adopted via preflight's "Group saved, services not configured"
+   (`env discover`). Missing configuration
    means Azure readiness is unassessed; it does not prove resources are missing.
 2. Baseline: `uv run fomo provision --participant <hackername>`
    (omit `--participant` to get a generated name; pass it explicitly so plan and apply match).

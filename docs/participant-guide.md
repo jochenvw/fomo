@@ -7,10 +7,11 @@ hackername after the first `--participant`.
 ## 0. Setup (5 min, before the session if possible)
 
 ```powershell
-git clone <this repo>; cd <repo>
+git clone https://github.com/jochenvw/fomo; cd fomo
 uv sync
 az login                      # pick the workshop subscription
-uv run fomo env pull --subscription <sub-id> --resource-group <rg>   # or copy .workshop/environment.json from the facilitator
+uv run fomo env pull --subscription <sub-id> --resource-group <rg>   # FOMO Bicep deployment, or:
+uv run fomo env discover --plan   # adopt services your IT team deployed in the confirmed group
 uv run fomo preflight --local-only
 ```
 
@@ -38,6 +39,10 @@ modified; new groups require a separate creation approval and have no charge the
 This does not deploy workshop services or grant roles. A new empty group remains blocked for
 the workshop until the facilitator/admin provisions the infrastructure; skip `env pull`
 until a workshop deployment exists.
+
+If your IT team already deployed Foundry, Storage and Search in your group, preflight lists them
+and `uv run fomo env discover --plan` adopts them (local write only; nothing changes in Azure).
+If something is missing, preflight names exactly what to request from IT and which role you need.
 
 ## 1. Baseline: Simple RAG (10 min)
 

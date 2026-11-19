@@ -12,7 +12,7 @@ symptom, then apply the fix.
 | `connection interrupted` / timeout during an Azure CLI read | temporary connectivity/service failure | supported reads retry twice; after exhaustion check VPN/proxy/connectivity, then rerun the failed check |
 | `azure.resource-group` BLOCKED, `missing: true` | saved group not found in the confirmed subscription | preflight offers re-create empty / choose existing / create another / defer; review `fomo env select ... --plan` and approve before applying |
 | `azure.resource-group` BLOCKED, `missing: null` | access or connectivity could not be verified | fix the reported access/network issue and retry; do not assume the group was deleted or recreate it |
-| `environment incomplete` | no `.workshop/environment.json` | `uv run fomo env pull` or copy the facilitator's file |
+| `environment incomplete` | group saved, services not configured | `uv run fomo preflight` names the step: `env pull` (FOMO deployment), `env discover` (IT-provisioned services) or a request to IT |
 | `UnicodeEncodeError` on Windows | console code page | `$env:PYTHONIOENCODING='utf-8'` |
 | `classifier.yaml still contains TODO` | starter not finished | complete the `criteria` descriptions |
 

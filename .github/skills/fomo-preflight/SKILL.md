@@ -112,20 +112,37 @@ or cannot be verified, stop Azure operations and repeat the relevant confirmatio
 never silently overwrite or follow a changed CLI default. A missing remembered resource group
 is a recovery decision, not a reason to abandon the participant; use the recovery section below.
 
-For an existing group that already hosts the workshop, pull missing resource configuration
-using the confirmed target:
+**Group saved, services not configured.** This is the common enterprise case: internal IT
+deploys Foundry, Storage and Search, and participants only *use* them (some may also be allowed
+to create). Do not ask the facilitator for the group name, which is already known. Run preflight;
+when `azure.environment` is BLOCKED it inspects the group read-only and reports
+`azure.discovery` (what exists) plus `rbac.provision-services` (whether creation is allowed).
+Follow the `azure.environment` fix, in this order:
 
-```
-uv run fomo env pull --subscription <sub-id> --resource-group <rg>
-```
+1. **FOMO Bicep deployment found:** `uv run fomo env pull --subscription <sub-id> --resource-group <rg>`
+   (reads deployment outputs, local write only).
+2. **Services found (typically IT-provisioned):** show `uv run fomo env discover --plan` verbatim.
+   It adopts the unique Foundry account, project, Storage and Search in the group, their real
+   endpoints and, when default names are absent, a unique matching embedding/chat/decision
+   deployment and existing project -> Search connection. Ask for approval of this local write,
+   then rerun with `--apply --yes`. It never creates, changes or grants anything in Azure.
+3. **Several candidates:** show the names, ask which ones the workshop uses (never pick),
+   then plan `uv run fomo env discover --foundry-account <a> --project <p> --storage-account <s> --search-service <q> --plan`
+   with only the ambiguous options.
+4. **Services absent:** turn the fix into a short, ready-to-send request to internal IT listing
+   each missing service and the participant's role on it, and offer to draft it. If
+   `rbac.provision-services` says creation is allowed, still recommend IT first; offer
+   self-deployment only as a separately approved paid plan
+   (`uv run fomo infra deploy --parameters infra/parameters/participant.bicepparam --plan`).
+5. **Group cannot be listed (403/connection):** the contents are unknown, not empty. Ask for at
+   least Reader on the group, or for the service names from IT.
 
-This reads deployment outputs and writes local configuration; it does not provision Azure
-resources. A matching `extra.confirmed_azure_context` is retained; verify its three target
-fields still match. For a newly created empty group, skip the deployment-output pull: none
-exist yet. Keep the saved target, run preflight and explain that only resource-group setup is
-complete; full workshop readiness remains BLOCKED until services are separately provisioned.
-An existing group without workshop outputs follows the same separate infrastructure workflow;
-do not repeatedly retry `env pull` or mistake the saved group for a fully configured environment.
+After a successful pull/discover, **always rerun full preflight**. Only that run assesses
+resources, the Search connection, models, RBAC, data-plane access and capacity. Adopted
+services may still lack the required models, the connection or the participant's roles; report
+those as requests to IT/the admin with the exact role and scope from the report. For a newly
+created empty group there is nothing to adopt; explain that only resource-group setup is
+complete. Do not repeatedly retry `env pull` or `env discover` with unchanged inputs.
 Alternatively, the facilitator can provide the environment file; validate its target and
 record the caller's confirmation through `env select` before using it.
 
@@ -199,7 +216,8 @@ send to the facilitator; the unscrubbed report stays local.
 If `azure.environment` is BLOCKED, explain **missing configuration; Azure readiness not yet
 assessed**, not "Azure resources are missing". The checker returns early: resource existence,
 RBAC, model availability, policy, networking and capacity are unknown, and `capacity: {}`
-means unassessed. Resolve the configuration using step 1 and rerun full preflight before
+means unassessed. Resolve the configuration using "Group saved, services not configured" in
+step 1 (use the `azure.discovery` evidence) and rerun full preflight before
 claiming readiness. Likewise, sign-in and subscription PASS alone do not establish access.
 The optional Bicep warning belongs to the facilitator and does not prevent participants
 from using already-provisioned infrastructure.

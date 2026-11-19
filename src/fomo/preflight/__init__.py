@@ -287,9 +287,7 @@ def azure_checks(report: Report, env: Environment, *, participant: str | None, s
             return
     missing = env.missing()
     if missing:
-        report.add("azure.environment", "azure-context", "Workshop environment", BLOCKED,
-                   f"missing: {', '.join(missing)}",
-                   "`uv run fomo env pull --resource-group <rg>` (facilitator shares the RG name)")
+        _unconfigured(report, env, missing)
         return
     sub = f"/subscriptions/{env.subscription_id}"
     rg = f"{sub}/resourceGroups/{env.resource_group}"
@@ -313,6 +311,53 @@ def azure_checks(report: Report, env: Environment, *, participant: str | None, s
     else:
         report.add("smoke.models", "models", "Live model calls (chat, embedding, decision)", SKIPPED,
                    "opt-in: `fomo preflight --smoke` makes 3 tiny paid calls (< $0.001)", required=False)
+
+
+def _unconfigured(report: Report, env: Environment, missing: list[str]) -> None:
+    """Group known, services not configured: look inside (read-only) and say exactly what to do next."""
+    from ..discover import advise, inventory, resolve
+
+    title = "Workshop environment"
+    evidence = f"missing: {', '.join(missing)}"
+    if not (env.subscription_id and env.resource_group):
+        report.add("azure.environment", "azure-context", title, BLOCKED, evidence,
+                   "confirm tenant, subscription and resource group: `uv run fomo env select ... --plan`")
+        return
+    try:
+        inv = inventory(env.subscription_id, env.resource_group)
+    except WorkshopError as exc:
+        report.add("azure.environment", "azure-context", title, BLOCKED,
+                   f"{evidence}; could not list {env.resource_group}: {str(exc)[:300]}",
+                   "result unknown, not proof the group is empty: verify connectivity and at least Reader on the "
+                   "group, then rerun; or ask internal IT for the Foundry account/project, Storage and Search names",
+                   owner="facilitator")
+        return
+    rg = f"/subscriptions/{env.subscription_id}/resourceGroups/{env.resource_group}"
+    actions = ("Microsoft.CognitiveServices/accounts/write", "Microsoft.Storage/storageAccounts/write",
+               "Microsoft.Search/searchServices/write", "Microsoft.Resources/deployments/write")
+    try:
+        perms = permissions(rg)
+        granted = [a for a in actions if effective(perms, a)]
+        can_create: bool | None = len(granted) == len(actions)
+    except WorkshopError:
+        granted, can_create = [], None
+    choices = {"foundry": env.foundry_account_name or None, "project": env.project_name or None,
+               "storage": env.storage_account_name or None, "search": env.search_service_name or None}
+    _, problems = resolve(inv, choices)
+    fix, owner = advise(env, inv, problems, can_create)
+    report.add("azure.discovery", "azure-context", "Services in the resource group (read-only)", INFO,
+               inv.summary() + ("; " + "; ".join(f"{r}: {p}" for r, p in problems.items()) if problems else ""),
+               required=False, data={"problems": problems, "deployment": inv.deployment,
+                                     "foundry": [a["name"] for a in inv.foundry], "projects": inv.projects,
+                                     "storage": [s["name"] for s in inv.storage],
+                                     "search": [s["name"] for s in inv.search]})
+    report.add("rbac.provision-services", "control-plane", "Can create services in the group (RBAC indicator)",
+               INFO if can_create is not None else WARNING,
+               "unknown (permissions query failed)" if can_create is None else
+               f"allowed: {', '.join(a.split('/')[-2] for a in granted) or 'none'}; only relevant if IT has not "
+               "provisioned the services; policy and quota still apply", required=False,
+               owner="participant" if can_create else "facilitator")
+    report.add("azure.environment", "azure-context", title, BLOCKED, evidence, fix, owner=owner)
 
 
 def _providers(report: Report, sub: str) -> None:

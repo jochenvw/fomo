@@ -5,7 +5,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from fomo import preflight
+from fomo import discover, preflight
 from fomo.errors import PermissionDenied, WorkshopError
 from fomo.preflight import BLOCKED, INFO, PASS, REPO_ROOT, WARNING, Report, _skill_ok, effective, scrub
 
@@ -105,6 +105,8 @@ def test_azure_tenant_checked_before_incomplete_environment(monkeypatch, env, ma
     arm = Mock(return_value=Mock(status_code=200))
     monkeypatch.setattr(preflight, "az", az)
     monkeypatch.setattr(preflight, "arm", arm)
+    monkeypatch.setattr(discover, "inventory", lambda *a: discover.Inventory())
+    monkeypatch.setattr(preflight, "permissions", lambda scope: [])
     report = Report("now", 1)
     preflight.azure_checks(report, env, participant=None, smoke=False)
     checks = {c.id: c for c in report.checks}
