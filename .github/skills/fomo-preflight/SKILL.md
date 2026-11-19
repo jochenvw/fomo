@@ -9,6 +9,28 @@ license: MIT
 Thin wrapper over the deterministic CLI. Never re-implement checks in prose and never change
 Azure state from this skill without the user's explicit yes.
 
+## Operating model: you run everything
+
+The participant does not type commands. **You run every `uv run fomo ...`, `az ...` and `git`
+command yourself** with your shell tool, from the repository root, and translate the output into
+plain language. The participant only answers questions, approves plans and completes the browser
+sign-in. Never end a step with "run this command"; run it, or ask for the decision you need.
+
+- **Setup:** if `uv` reports a missing environment or `fomo` is not found, run `uv sync` yourself
+  (local only, no Azure change). If `uv` itself is missing, explain how to install it and wait.
+- **Sign-in:** run `az login` yourself (add `--tenant <tenant-id>` for a confirmed directory).
+  Tell the participant a browser window will open and wait for it. If no browser can open,
+  use `az login --use-device-code` and relay the code and URL exactly.
+- **Context switch:** after the participant explicitly picks a subscription, run
+  `az account set --subscription <sub-id>` yourself and verify it. Their choice is the
+  approval for this CLI-default change only.
+- **Plans:** run `--plan`, present what it will do (targets, writes, cost) in plain language,
+  include the command for transparency, ask yes/no, then run the identical command with
+  `--apply --yes` yourself. Never ask the participant to apply it.
+- **Fix lines:** report `fix` fields that name a `uv run`/`az` command as an action you can
+  take (with approval where it writes), not as homework. Fixes owned by IT/facilitator/admin
+  become a ready-to-send message you draft for the participant.
+
 ## Presentation
 
 Open each skill invocation with this compact ASCII mascot and the heading **🔎 FOMO Preflight**:
@@ -30,7 +52,8 @@ commands, JSON, report data or resource names.
 Before Azure checks, follow **check sign-in -> show username -> confirm directory (tenant) ->
 confirm subscription -> confirm resource group**, in that order. Never infer the workshop
 target from a successful sign-in or an enabled subscription.
-Use read-only discovery; do not switch Azure CLI context or provision anything automatically.
+Use read-only discovery; switch Azure CLI context only after the participant's explicit choice
+and never provision anything automatically.
 The only new-resource action allowed here is an empty resource group through the separately
 approved plan below; creating workshop services remains a separate infrastructure workflow.
 For `--local-only`, skip this step and explicitly say Azure readiness is not assessed.
@@ -39,22 +62,22 @@ For `--local-only`, skip this step and explicitly say Azure readiness is not ass
    an Azure management token with
    `az account get-access-token --resource https://management.azure.com/ --query expiresOn --output tsv`;
    a cached account alone does not establish a usable sign-in. Never display or save the token.
-   If signed out or the session has expired, have the caller run `az login`, then retry.
+   If signed out or the session has expired, run `az login` yourself, wait, then retry.
    If sign-in cannot be verified, report the error and stop Azure discovery; do not ask them
    to confirm a tenant or subscription yet.
 2. **Username:** after sign-in succeeds, explicitly show `Signed in as: <user.name>` from
    the account response before asking about the tenant. Also show `user.type`; if it is a
    service principal/managed identity, label it as such rather than presenting it as a human
    username. If the identity is missing, report that rather than guessing. If the caller
-   says it is the wrong account, have them sign in with the intended account and restart.
+   says it is the wrong account, run `az login` again so they can pick the intended account, and restart.
 3. **Directory:** show the directory name when available and `tenantId`, and ask the caller
-   to confirm this is the workshop directory. If wrong, have them run
-   `az login --tenant <tenant-id>`, then repeat the sign-in check and username display before
+   to confirm this is the workshop directory. If wrong, ask for the workshop tenant, run
+   `az login --tenant <tenant-id>` yourself, then repeat the sign-in check and username display before
    confirming the directory again.
 4. **Subscription:** only after directory confirmation, list enabled subscriptions in that
    tenant with `az account list --output json` (filter locally by the confirmed `tenantId`).
    Show names and IDs, identify the active subscription and ask which is the workshop target.
-   If different, have the caller run `az account set --subscription <sub-id>`.
+   If different, run `az account set --subscription <sub-id>` yourself after their choice.
    Re-read `az account show` and verify both IDs before continuing.
 5. **Resource group:** only after subscription confirmation, run
    `az group list --subscription <sub-id> --output json`. Show names and locations and offer
@@ -231,7 +254,7 @@ without one, explicitly state these checks were not performed.
 
 - Creation permission granted: explain **missing, self-provisionable subject to approval**.
   Keep the missing resource BLOCKED until provisioned and re-checked.
-- Creation permission not granted: tell the participant to have the facilitator/admin
+- Creation permission not granted: draft a request for the participant asking the facilitator/admin to
   **provision it for them before the workshop**; do not assume everyone needs Contributor.
 - Permissions unavailable: report **unknown**, never self-provisionable.
 

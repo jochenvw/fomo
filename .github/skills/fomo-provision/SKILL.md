@@ -13,6 +13,8 @@ Thin wrapper over the deterministic CLI. Every write is plan -> user yes -> appl
 Open each invocation with the compact ASCII mascot from the "Presentation" section in
 `../fomo-preflight/SKILL.md`, followed by **🛠️ FOMO Provision**. Use its status emoji conventions.
 Show the greeting once, keep plans/approvals clear, and never decorate commands or JSON.
+Follow "Operating model: you run everything" in `../fomo-preflight/SKILL.md`: you run every
+command; the participant only answers, approves and edits their classifier.
 
 ## Approval rule (applies to every step below)
 

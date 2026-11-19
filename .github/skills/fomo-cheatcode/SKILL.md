@@ -13,6 +13,8 @@ Not a safety bypass: same permission checks, same plan, same confirmation, same 
 Open each invocation with the compact ASCII mascot from the "Presentation" section in
 `../fomo-preflight/SKILL.md`, followed by **🚀 FOMO Cheatcode**. Use its status emoji conventions.
 Show the greeting once, keep plans/approvals clear, and never decorate commands or JSON.
+Follow "Operating model: you run everything" in `../fomo-preflight/SKILL.md`: you run every
+command; the participant only answers and approves.
 The rocket is not evidence that a deployment succeeded.
 
 ## Steps
