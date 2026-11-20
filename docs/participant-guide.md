@@ -51,11 +51,18 @@ Azure reservation; if a first provision plan shows unexpected existing assets, s
 
 ## 1. Baseline: Simple RAG (10 min)
 
+With Copilot CLI, `/fomo-help` takes you through this and every later step: it checks where you
+are, explains what the step builds and where to see it, and runs it after your approval (or
+gives you the command). Without Copilot, `uv run fomo next` prints the same checkpoint.
+
 ```powershell
 uv run fomo provision          # read the plan for your saved name
 uv run fomo provision --apply
 uv run fomo agents ask simple "What payment terms apply under our supplier contracts?"
 ```
+
+Step by step instead: `--step upload`, then `--step index`, then `--step agent` (each plans first;
+add `--apply`).
 
 Creates: your inbox container with 25 documents, raw index, Simple RAG agent, and starter folder
 `.workshop/runs/<your-name>/miner/`.
@@ -98,9 +105,10 @@ uv run fomo smart --classifier ".workshop\runs\$name\miner\classifier.yaml" --ap
 uv run fomo agents ask smart "What payment terms apply under our supplier contracts?"
 ```
 
-Creates index `<your-name>-smart` (with `document_type`) and agent `<your-name>-smart-rag`.
-The agent decides per question which document type to search: "payment terms" → contracts,
-"how much were we invoiced" → invoices. Its options and their definitions come from your
+Creates index `<your-name>-smart` (with `document_type`), a Foundry IQ knowledge source
+`<your-name>-smart-ks` + knowledge base `<your-name>-smart-kb`, and agent `<your-name>-smart-rag`.
+The knowledge base decides per question which document type to search: "payment terms" →
+contracts, "how much were we invoiced" → invoices. Its options and their definitions come from your
 classifier (`--classifier <file>`; default: the reference), limited to labels in the index.
 Better label definitions improve both classification and routing.
 
@@ -119,7 +127,7 @@ Reference run (see [`examples/sample-evaluation.md`](../examples/sample-evaluati
 
 Discussion: a fixed contract filter wins on contract questions and **hurts** everything else. The
 `smart_desired` row (right filter per question) is what routing aims for; the agent section of the
-report shows which filter Smart RAG actually chose for each question.
+report shows which filter Smart RAG's knowledge base actually generated for each question.
 
 ### Foundry cloud evaluation
 
@@ -178,7 +186,7 @@ The first apply creates six evaluation-only prompt agents (`<name>-smart-rag-<ty
 
 | Situation | Command |
 |---|---|
-| Where am I? | `uv run fomo status` |
+| Where am I? | `uv run fomo status`, or `uv run fomo next` for the next step and why |
 | Jump to the end | `uv run fomo cheatcode --apply` (~5 min, reference classifier) |
 | Redo classification | `uv run fomo reset-participant --scope metadata --apply` |
 | Something failed | [troubleshooting.md](troubleshooting.md); logs in `.workshop/runs/<name>/` |

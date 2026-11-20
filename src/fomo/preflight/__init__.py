@@ -900,6 +900,28 @@ def _data_plane(report: Report, env: Environment, participant: str | None) -> No
         client = AIProjectClient(endpoint=env.resolved_project_endpoint(), credential=credential())
         items = list(client.agents.list(limit=100))
         return PASS, f"listed {len(items)} agent(s) in project {env.project_name}"
+    def foundry_iq() -> tuple[str, str]:
+        from ..search.knowledge import KB_API_VERSION, KnowledgeClient
+
+        kbs = KnowledgeClient(env).list_names("knowledgebases")
+        return PASS, f"listed {len(kbs)} knowledge base(s) with api-version {KB_API_VERSION}"
+    _probe(report, "data.foundry-iq", cat, "Foundry IQ knowledge bases (Smart RAG, read-only)", foundry_iq,
+           fix="facilitator: the Search service must support the knowledge base preview API (region/SKU) and "
+               "you need Search Service Contributor", owner="facilitator")
+
+    def semantic() -> tuple[str, str]:
+        plan = (arm("GET", env.search_service_id, "2025-05-01").json().get("properties") or {}).get("semanticSearch")
+        need = report.participants * capacity.SEMANTIC_QUERIES_PER_PARTICIPANT
+        if plan in (None, "disabled"):
+            return BLOCKED, (f"semanticSearch={plan}: Smart RAG's knowledge base needs the semantic ranker")
+        if plan == "free" and need > capacity.SEMANTIC_FREE_QUERIES:
+            return WARNING, (f"semanticSearch=free ({capacity.SEMANTIC_FREE_QUERIES} semantic queries/month); "
+                             f"{report.participants} participants need ~{need}")
+        return PASS, f"semanticSearch={plan} (~{need} semantic queries for {report.participants} participant(s))"
+    _probe(report, "search.semantic", cat, "Search semantic ranker (Smart RAG knowledge base)", semantic,
+           fix="facilitator/admin: set the Search semantic ranker plan to 'standard' (pay per 1,000 queries "
+               "beyond the free 1,000/month); infra/modules/search.bicep param semanticSearch", owner="admin")
+
     _probe(report, "data.agents", cat, "Foundry Agent Service (functional, read-only)", agents,
            fix="facilitator: Foundry User on the account and Foundry Project Manager on the project",
            owner="facilitator")
@@ -963,20 +985,17 @@ def _identities(report: Report, env: Environment, shared: dict[str, Any]) -> Non
 
 
 def _capacity(report: Report, env: Environment) -> None:
-    from ..search.client import SearchClient
+    from ..search.knowledge import service_usage
 
     def fn() -> tuple[str, str]:
-        stats = SearchClient(env).service_stats().get("counters", {})
-        current = {"indexes": stats.get("indexesCount", {}).get("usage", 0),
-                   "indexers": stats.get("indexersCount", {}).get("usage", 0),
-                   "skillsets": stats.get("skillsetCount", {}).get("usage", 0),
-                   "datasources": stats.get("dataSourcesCount", {}).get("usage", 0)}
+        current = service_usage(env)
         sku = (env.search_sku or "basic").lower()
         rep = capacity.capacity_report(report.participants, sku, current=current)
         status = PASS if rep.fits else BLOCKED
         evidence = (f"{report.participants} participants need {rep.required['indexes']} indexes / "
-                    f"{rep.required['indexers']} indexers; {sku} allows {rep.limits['indexes']} "
-                    f"({current['indexes']} in use) -> max {rep.participants_max} participants"
+                    f"{rep.required['indexers']} indexers / {rep.required['knowledge_bases']} knowledge bases + "
+                    f"sources; {sku} allows {rep.limits['indexes']} each ({current['indexes']} indexes, "
+                    f"{current['knowledge_bases']} knowledge bases in use) -> max {rep.participants_max} participants"
                     + ("" if rep.fits else f"; recommended SKU: {rep.recommended_sku}"))
         report.capacity = rep.to_dict()
         return status, evidence
@@ -986,13 +1005,13 @@ def _capacity(report: Report, env: Environment) -> None:
     model_caps = {c.id: c.data.get("capacity") for c in report.checks if c.id.startswith("models.")}
     chat_cap = model_caps.get("models.chat")
     if chat_cap:
-        need_k = report.participants * 2 * (capacity.AGENT_TOKENS_PER_QUESTION["input"]
-                                            + capacity.AGENT_TOKENS_PER_QUESTION["output"]) / 1000
+        need_k = report.participants * (2 * sum(capacity.AGENT_TOKENS_PER_QUESTION.values())
+                                        + sum(capacity.KB_PLANNING_TOKENS_PER_QUESTION.values())) / 1000
         ok = chat_cap >= need_k
         report.add("capacity.chat-tpm", "capacity", "Chat deployment throughput for a synchronized demo minute",
                    PASS if ok else WARNING,
                    f"capacity {chat_cap}k TPM vs ~{need_k:.0f}k tokens if all {report.participants} participants "
-                   "ask both agents in the same minute",
+                   "ask both agents in the same minute (incl. Smart RAG knowledge base query planning)",
                    "" if ok else "facilitator: raise deployment capacity or stagger the comparison step",
                    owner="facilitator", required=False)
 

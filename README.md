@@ -21,15 +21,16 @@ question which document type to search, using the new metadata.
 
 ```
  Simple RAG ──> raw index ─┐                       ┌─> smart index ──> Smart RAG
-                           ├── Blob container ─────┤   (agent picks document_type per question)
+                           ├── Blob container ─────┤   (Foundry IQ knowledge base picks document_type)
  25 synthetic docs ────────┘        ▲              │
                                     └── Metadata Miner (hosted agent, Decision-1.1)
 ```
 
 Reference result: canonical question q01, **P@5 0.40 → 1.00** under a contract filter. A fixed
 filter **hurts** non-contract questions; Smart RAG therefore routes each question to the right
-type (payment terms → contract, inspection → technical_report, invoiced amount → invoice). The
-evaluation shows the filter it chose and reports misses honestly
+type (payment terms → contract, inspection → technical_report, invoiced amount → invoice) through a
+Foundry IQ knowledge base whose query planner reads the classifier's label definitions. The
+evaluation shows the filter it generated and reports misses honestly
 ([sample](examples/sample-evaluation.md)).
 
 ## 1. Five-minute start
@@ -54,12 +55,15 @@ checks Azure without changing it and writes its reports locally.
 | Compare | `uv run fomo eval` |
 | Skip to the end | `uv run fomo cheatcode --participant <hackername> --apply` |
 | Where am I? | `uv run fomo status` |
+| What's next, and why? | `uv run fomo next` |
 | Reset | `uv run fomo reset-participant --scope metadata --apply` |
 | Clean up | `uv run fomo cleanup --apply` (type `DELETE`) |
 
 With **GitHub Copilot CLI**: run `copilot` in the repo, then *"Use the /fomo-preflight skill"*,
-`/fomo-provision` or `/fomo-cheatcode`. Skills call the same commands.
-Each skill opens with the FOMO mascot and a small emoji heading: 🔎 preflight, 🛠️ provision,
+`/fomo-help`, `/fomo-provision` or `/fomo-cheatcode`. Skills call the same commands.
+`/fomo-help` is the step-by-step companion: it reads live progress (`fomo next`), explains the
+next checkpoint and how to see its result, then runs it with approval or lets you run it.
+Each skill opens with the FOMO mascot and a small emoji heading: 🔎 preflight, 🧭 help, 🛠️ provision,
 🚀 cheatcode. Status and approval text stay explicit; JSON output stays machine-readable.
 
 Preflight checks sign-in, shows the username, then confirms tenant, subscription and resource
@@ -76,7 +80,7 @@ shared private links, laptop DNS reach and the managed-identity roles between Fo
 
 | What | Naming |
 |---|---|
-| Skills / CLI | `fomo-preflight`, `fomo-provision`, `fomo-cheatcode` / `uv run fomo ...` |
+| Skills / CLI | `fomo-preflight`, `fomo-help`, `fomo-provision`, `fomo-cheatcode` / `uv run fomo ...` |
 | New shared infrastructure | `fomo` prefix, Foundry project `fomo`, connection `fomo-search`, `workshop=fomo` tags |
 | Participant agents | `<hackername>-simple-rag`, `<hackername>-metadata-miner`, `<hackername>-smart-rag` |
 | Participant Search / Blob | `<hackername>-raw`, `<hackername>-smart`, `<hackername>-inbox` |
@@ -107,14 +111,14 @@ Customer-owned Foundry/Search/Storage: `infra/reuse-existing.bicep`. Full timeli
 | Topic | Summary | Details |
 |---|---|---|
 | Cost | Search SKU dominates (billed while it exists); models cost cents per participant | [cost-capacity-cleanup](docs/cost-capacity-cleanup.md) |
-| Capacity | 7 Search objects per participant; Basic ≤ 7, S1 ≤ 25, S2 ≤ 100 participants | `fomo capacity` |
+| Capacity | 9 Search objects per participant (incl. 1 knowledge source + 1 knowledge base); Basic ≤ 7, S1 ≤ 25, S2 ≤ 100 participants; semantic ranker `standard` for a cohort | `fomo capacity` |
 | Roles | facilitator: Owner (or Contributor + RBAC Admin) on the RG; participants: 7 scoped role assignments from Bicep, incl. 2 ABAC-limited RBAC Admin | [security-and-rbac](docs/security-and-rbac.md) |
 | Auth | Entra ID only; no keys anywhere | |
 | Region | Sweden Central recommended and tested; other regions OK after a target rehearsal | [prerequisites](docs/prerequisites.md) |
 
 ## 4. Known limitations
 
-1. Fixed `contract` filter drops non-contract questions to P@5 0 (q05, q06, q08); intent-aware filtering is an extension.
+1. Fixed `contract` filter drops non-contract questions to P@5 0 (q05, q06, q08); Smart RAG therefore routes per question. Its knowledge base uses a preview API (`2026-11-01-preview`) and adds query planning + semantic reranking that Simple RAG does not have.
 2. Hosted agents cannot reach Storage inside a network security perimeter; Storage uses public endpoint + Entra-only ([why](docs/troubleshooting.md#hosted-networking)).
 3. Shared topology isolates by namespace + RBAC, not hard tenancy.
 4. First hosted `miner run` may wait 1-2 min for role propagation (automatic retry).

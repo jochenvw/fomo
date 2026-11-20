@@ -308,6 +308,22 @@ is the participant's own fix (connect VPN, rerun). Private Storage also triggers
 `network.hosted-egress`: say plainly that the hosted miner needs a reachable Blob endpoint and
 that `--local` is the labelled fallback, not equivalent.
 
+### Smart RAG: Foundry IQ knowledge base
+
+Smart RAG routes through one Foundry IQ knowledge source + knowledge base per participant
+(Search preview API `2026-11-01-preview`). Explain these checks:
+
+| Check | What it proves | Typical fix |
+|---|---|---|
+| `data.foundry-iq` | the Search service accepts the knowledge base API and you can list knowledge bases | facilitator: supported region/SKU; *Search Service Contributor* |
+| `search.semantic` | semantic ranker plan; the knowledge base reranks with it (Simple RAG does not) | admin: plan `standard`; `free` (1,000 queries/month) is WARNING above ~10 participants |
+| `capacity.search` | indexes/indexers and knowledge sources/bases fit the SKU for N participants | facilitator: `fomo capacity --participants N` |
+| `ident.search-foundry` | also covers query planning: the knowledge base calls the chat model as the Search identity | grant role |
+
+The knowledge base's planner needs a reasoning chat model (GPT-4o/4.1 are rejected with query
+hints). If the deployment name differs from the model name, set `FOMO_CHAT_MODEL`;
+`FOMO_KB_REASONING_EFFORT` is `low` or `medium` (default).
+
 ## 4. Optional remediation (approval required)
 
 Only the safe, participant-level fixes are automated by `preflight --fix`

@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import time
 from collections import Counter
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
@@ -102,37 +104,59 @@ def target_source(agent: dict[str, Any], rows: list[dict[str, Any]], dataset_uri
     }
 
 
-def _search_target(name: str, definition: dict[str, Any]) -> tuple[str, int | None]:
-    """(index, top_k) an agent searches: the built-in Search tool entry or the OpenAPI search path."""
+def _search_target(name: str, definition: dict[str, Any],
+                   resolve_kb: Callable[[str], str] | None = None) -> tuple[str, int | None]:
+    """(index, top_k) an agent searches: the built-in Search tool entry, or the index behind the Foundry IQ
+    knowledge base its MCP tool calls (top_k None: the knowledge base sizes its own results)."""
     tools = definition.get("tools", [])
     indexes = [index for tool in tools if tool.get("type") == "azure_ai_search"
                for index in tool["azure_ai_search"]["indexes"]]
-    paths = [(path, op) for tool in tools if tool.get("type") == "openapi"
-             for path, op in tool["openapi"]["spec"].get("paths", {}).items()]
-    if len(tools) != 1 or len(indexes) + len(paths) != 1:
+    mcps = [tool for tool in tools if tool.get("type") == "mcp"]
+    if len(tools) != 1 or len(indexes) + len(mcps) != 1:
         raise Blocked(f"{name} must have exactly one search tool over exactly one index")
     if indexes:
         return indexes[0]["index_name"], indexes[0].get("top_k")
-    path, op = paths[0]
-    body = op["post"]["requestBody"]["content"]["application/json"]["schema"]["properties"]
-    return path.split("/")[2], body["top"]["enum"][0]
+    match = re.search(r"/knowledgebases/([^/?]+)/mcp", mcps[0].get("server_url") or "")
+    if not match or resolve_kb is None:
+        raise Blocked(f"{name}: MCP tool is not a Foundry IQ knowledge base endpoint")
+    return resolve_kb(match.group(1)), None
+
+
+def _knowledge_base_index(env: Environment) -> Callable[[str], str]:
+    from ..search.knowledge import KnowledgeClient
+
+    client = KnowledgeClient(env)
+
+    def resolve(kb_name: str) -> str:
+        kb = client.get("knowledgebases", kb_name) or {}
+        sources = [s["name"] for s in kb.get("knowledgeSources", [])]
+        if len(sources) != 1:
+            raise Blocked(f"knowledge base {kb_name} must have exactly one knowledge source")
+        ks = client.get("knowledgesources", sources[0]) or {}
+        index = (ks.get("searchIndexParameters") or {}).get("searchIndexName")
+        if not index:
+            raise Blocked(f"knowledge source {sources[0]} is not a searchIndex source")
+        return str(index)
+    return resolve
 
 
 def inspect_targets(project: Any, env: Environment, names: ParticipantNames, rows: list[dict[str, Any]],
                     judge: str) -> dict[str, Any]:
-    """Simple RAG (built-in Search tool, raw index) vs Smart RAG (OpenAPI search tool, smart index, filter
-    chosen per question). Fair when model and top_k match, Smart RAG's instructions only extend Simple RAG's,
-    and both indexes hold identical chunks."""
+    """Simple RAG (built-in Search tool, raw index) vs Smart RAG (Foundry IQ knowledge base over the smart
+    index, filter derived per question). Fair when the model matches, Smart RAG's instructions only extend
+    Simple RAG's, and both indexes hold identical chunks. Retrieval depth differs by design (top_k vs the
+    knowledge base's own sizing) and is recorded in the context."""
     agents = {}
     settings: dict[str, dict[str, Any]] = {}
     search = SearchClient(env)
     contents: dict[str, list[tuple[str, str]]] = {}
+    resolve_kb = _knowledge_base_index(env)
     for role, name in (("simple", names.simple_rag_agent), ("smart", names.smart_rag_agent)):
         latest = project.agents.get(name).versions.latest
         definition = latest.definition.as_dict()
         if definition.get("kind") != "prompt":
             raise Blocked(f"{name} is not a prompt RAG agent")
-        index_name, top_k = _search_target(name, definition)
+        index_name, top_k = _search_target(name, definition, resolve_kb)
         agents[role] = {"name": name, "version": str(latest.version), "definition": definition}
         settings[role] = {"model": definition.get("model"), "top_k": top_k,
                           "instructions": definition.get("instructions") or ""}
@@ -149,10 +173,10 @@ def inspect_targets(project: Any, env: Environment, names: ParticipantNames, row
                 if _normalized(quote) not in by_doc.get(doc_id, ""):
                     raise Blocked(f"{row['id']}: reference evidence missing from live {index_name}/{doc_id}")
     simple, smart = settings["simple"], settings["smart"]
-    if (simple["model"], simple["top_k"]) != (smart["model"], smart["top_k"]) \
+    if simple["model"] != smart["model"] \
             or not smart["instructions"].startswith(simple["instructions"]) \
             or contents["simple"] != contents["smart"]:
-        raise Blocked("unfair comparison: model, top_k, base instructions or unfiltered index contents differ")
+        raise Blocked("unfair comparison: model, base instructions or unfiltered index contents differ")
     catalog = {e.name: e.as_dict() for e in project.evaluators.list(type="builtin")}
     for metric in METRICS:
         if f"builtin.{metric}" not in catalog:
@@ -163,6 +187,8 @@ def inspect_targets(project: Any, env: Environment, names: ParticipantNames, row
         raise Blocked(f"judge deployment {judge} is not a ready chat-completion deployment")
     return {"agents": agents, "index_content_sha256": _hash(contents["simple"]),
             "index_chunks": len(contents["simple"]),
+            "retrieval": {"simple": f"built-in Search tool, top_k={simple['top_k']}, no semantic ranker",
+                          "smart": "Foundry IQ knowledge base (query planning + semantic ranker)"},
             "evaluators": {m: {"name": f"builtin.{m}", "version": catalog[f"builtin.{m}"]["version"]}
                            for m in METRICS}}
 
@@ -180,7 +206,8 @@ def evaluation_plan(env: Environment, names: ParticipantNames, rows: list[dict[s
     plan.notes.extend([
         "reference answers/context are sent only to evaluators, never to the agents",
         "groundedness is against curated reference documents, not a reconstruction of actual retrieval",
-        "Smart RAG is contracts-scoped: report non-contract regressions separately",
+        "Smart RAG routes per question (knowledge base) and adds semantic reranking Simple RAG lacks: "
+        "report contract and non-contract slices separately",
         "no agents, indexes, roles or shared infrastructure are changed",
     ])
     return plan
@@ -329,11 +356,11 @@ def _citations(value: Any, titles: dict[str, str]) -> set[str]:
 
 
 def _retrieved(value: Any) -> list[str]:
-    """doc_ids returned by OpenAPI search calls (Smart RAG cites them in text, not as url_citation)."""
+    """doc_ids returned by knowledge base MCP calls (fallback when url_citations do not resolve)."""
     found: list[str] = []
     if isinstance(value, dict):
-        if value.get("type") == "openapi_call_output":
-            found += retrieved_doc_ids(value.get("output", ""))
+        if value.get("type") == "mcp_call":
+            found += retrieved_doc_ids(value.get("output") or "")
         for child in value.values():
             found += _retrieved(child)
     elif isinstance(value, list):
@@ -344,7 +371,7 @@ def _retrieved(value: Any) -> list[str]:
 
 def _search_calls(value: Any) -> int:
     if isinstance(value, dict):
-        called = value.get("type") in ("azure_ai_search_call", "openapi_call") or (
+        called = value.get("type") in ("azure_ai_search_call", "mcp_call") or (
             value.get("type") in ("tool_call", "function_call") and value.get("name") == "azure_ai_search")
         return int(called) + sum(_search_calls(child) for child in value.values())
     return sum(_search_calls(child) for child in value) if isinstance(value, list) else 0
@@ -364,7 +391,10 @@ def comparison(state: dict[str, Any]) -> dict[str, Any]:
             "ungroundedness flags. Inspect judge reasons before calling these hallucinations.",
             "Reference answers and evidence are judge-only; both targets receive only the same query.",
             "Single-run seed benchmark: differences are descriptive, not statistical proof.",
-            "Smart RAG chooses a document_type filter per question; a wrong choice excludes relevant documents.",
+            "Smart RAG's knowledge base derives a document_type filter per question; a wrong choice excludes "
+            "relevant documents.",
+            "Retrieval stacks differ beyond metadata: Smart RAG also gets query planning and semantic reranking "
+            "from Foundry IQ; Simple RAG stays vanilla (hybrid, top_k=5).",
         ],
     }
     for role, info in state["runs"].items():

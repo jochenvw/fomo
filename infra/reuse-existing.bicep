@@ -115,4 +115,3 @@ output STORAGE_BLOB_ENDPOINT string = storage.properties.primaryEndpoints.blob
 output SEARCH_SERVICE_NAME string = searchServiceName
 output SEARCH_ENDPOINT string = 'https://${searchServiceName}.search.windows.net'
 output SEARCH_CONNECTION_NAME string = connection.outputs.connectionName
-output SEARCH_OPENAPI_CONNECTION_NAME string = connection.outputs.openapiConnectionName

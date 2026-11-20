@@ -24,7 +24,9 @@ param partitionCount int = 1
   'free'
   'standard'
 ])
-param semanticSearch string = 'free'
+// Smart RAG's Foundry IQ knowledge base reranks with the semantic ranker; 'free' caps at 1,000
+// queries/month, too few for a cohort. Simple RAG never uses it.
+param semanticSearch string = 'standard'
 
 resource search 'Microsoft.Search/searchServices@2025-05-01' = {
   name: searchServiceName

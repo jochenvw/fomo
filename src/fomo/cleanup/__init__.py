@@ -1,7 +1,8 @@
 """Reset and cleanup of ONE participant's workshop-owned assets.
 
 Never touches shared/facilitator resources: Foundry account/project, model deployments,
-Search service, storage account, project connection. Inventory first (dry run is the
+Search service, storage account, shared Search project connection. The participant's own
+knowledge base, knowledge source and knowledge base connection are deleted. Inventory first (dry run is the
 default), then a typed DELETE confirmation.
 """
 
@@ -14,7 +15,7 @@ from typing import Any
 
 from .. import rbac
 from ..agents.hosted import HostedMiner, required_grants
-from ..agents.prompt import PromptAgents
+from ..agents.prompt import PromptAgents, delete_kb_connection, kb_connection_exists
 from ..config import Environment
 from ..data.blob import CLASSIFICATION_KEYS
 from ..miner.pipeline import CHECKPOINT_BLOB
@@ -22,6 +23,7 @@ from ..naming import ParticipantNames
 from ..plan import Plan
 from ..provision.participant import container_client
 from ..search.client import SearchClient
+from ..search.knowledge import KnowledgeClient
 from ..telemetry.logging import RunLogger
 
 SEARCH_OBJECTS = (
@@ -48,7 +50,13 @@ def inventory(env: Environment, names: ParticipantNames) -> dict[str, Any]:
     search = SearchClient(env)
     agents = PromptAgents(env)
     cont = container_client(env, names)
-    inv: dict[str, Any] = {"search": [], "agents": [], "container": None, "grants": [], "local": None}
+    inv: dict[str, Any] = {"search": [], "agents": [], "container": None, "grants": [], "local": None,
+                           "connection": None}
+    knowledge = KnowledgeClient(env)
+    for kind, name in (("knowledgebases", names.knowledge_base), ("knowledgesources", names.knowledge_source)):
+        with contextlib.suppress(Exception):
+            if knowledge.get(kind, name) is not None:
+                inv["search"].append(f"{kind}/{name}")
     for kind, attr in SEARCH_OBJECTS:
         name = getattr(names, attr)
         if search.get(kind, name) is not None:
@@ -57,6 +65,8 @@ def inventory(env: Environment, names: ParticipantNames) -> dict[str, Any]:
                  *names.eval_route_agents):
         if agents.exists(name):
             inv["agents"].append(name)
+    if kb_connection_exists(env, names):
+        inv["connection"] = names.knowledge_base_connection
     if cont.exists():
         inv["container"] = {"name": names.container, "blobs": sum(1 for _ in cont.list())}
     principal = _miner_principal(env, names) if names.metadata_miner_agent in inv["agents"] else None
@@ -74,6 +84,8 @@ def plan_cleanup(env: Environment, names: ParticipantNames, inv: dict[str, Any],
         p.add("delete", f"role assignment {g['role']}", f"agent identity {g['principal_id']} at {g['scope']}")
     for name in inv["agents"]:
         p.add("delete", f"agent {name}", "all versions")
+    if inv.get("connection"):
+        p.add("delete", f"project connection {inv['connection']}", "Smart RAG knowledge base MCP connection")
     for obj in inv["search"]:
         p.add("delete", f"search {obj}")
     if inv["container"]:
@@ -106,10 +118,14 @@ def apply_cleanup(env: Environment, names: ParticipantNames, log: RunLogger, inv
         except Exception as exc:
             log.error(f"agent {name}: {exc}"[:500])
             record(False, f"agent {name}")
+    if inv.get("connection"):
+        record(delete_kb_connection(env, names), f"connection {inv['connection']}")
     search = SearchClient(env)
-    for obj in inv["search"]:
+    knowledge = KnowledgeClient(env)
+    for obj in inv["search"]:  # knowledge base -> knowledge source -> indexers -> ... -> indexes
         kind, name = obj.split("/", 1)
-        record(search.delete(kind, name), f"search {obj}")
+        client = knowledge if kind.startswith("knowledge") else search
+        record(client.delete(kind, name), f"search {obj}")
     if inv["container"]:
         try:
             container_client(env, names).delete_container()

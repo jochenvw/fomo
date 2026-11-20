@@ -39,8 +39,10 @@ retry safe reads, offer approved target-recovery choices, and inspect uncertain 
 3. Only then: `uv run fomo cheatcode --participant <hackername> --apply --yes`.
    Typical duration on pre-provisioned shared infrastructure: 3-5 minutes (hosted agent
    activation ~1 min, RBAC propagation up to a few minutes is retried automatically).
-4. Present the final table: raw vs smart precision@5 per question, the cited document IDs of
-   both agents, and the links to the three agents, both indexes, the container and the logs.
+4. Present the final table: raw vs smart precision@5 per question, the filter Smart RAG's
+   knowledge base generated per question, the cited document IDs of both agents, and the links to
+   the three agents, both indexes, the knowledge base, the container and the logs. Smart RAG also
+   gets query planning and semantic reranking that Simple RAG lacks; say so when reporting the delta.
 
 Options: `--classifier <file>` to use the participant's own classifier instead of the reference;
 `--force-deploy` to redeploy the hosted agent even if the code hash is unchanged.

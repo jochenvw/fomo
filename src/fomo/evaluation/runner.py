@@ -120,6 +120,7 @@ def _answer_dict(ans: AgentAnswer, relevant: list[str]) -> dict[str, Any]:
         "citation_precision": round(len([d for d in cited if d in relevant]) / len(cited), 3) if cited else None,
         "tool_calls": ans.tool_calls,
         "filters": ans.filters,
+        "document_types": ans.document_types,
         "retrieved_doc_ids": ans.retrieved,
         "input_tokens": ans.input_tokens,
         "output_tokens": ans.output_tokens,
@@ -131,7 +132,10 @@ def _answer_dict(ans: AgentAnswer, relevant: list[str]) -> dict[str, Any]:
 
 def agent_side_by_side(env: Environment, names: ParticipantNames, queries: list[dict[str, Any]],
                        *, workers: int = 4) -> list[dict[str, Any]]:
+    from ..search.knowledge import KnowledgeClient
+
     agents = PromptAgents(env)
+    knowledge = KnowledgeClient(env)
     specs = agent_specs(env, names)
     jobs = [(q, key) for q in queries for key in ("simple", "smart")]
 
@@ -139,6 +143,9 @@ def agent_side_by_side(env: Environment, names: ParticipantNames, queries: list[
         q, key = job
         try:
             ans = agents.ask(specs[key].name, q["question"])
+            if specs[key].knowledge_base:
+                # The MCP output omits the planner's filter; one direct retrieve with activity shows it.
+                ans.filters = knowledge.retrieve(names, q["question"]).filters
             return {"query_id": q["id"], "role": key, **_answer_dict(ans, q["relevant_doc_ids"])}
         except Exception as exc:
             return {"query_id": q["id"], "role": key, "agent": specs[key].name, "error": str(exc)[:500]}
@@ -190,8 +197,9 @@ def evaluate(env: Environment, names: ParticipantNames, *, agents: str = "canoni
             "chunks_fetched": CHUNKS_PER_QUERY,
             "agent_top_k": TOP_K,
             "indexes": {"raw": names.raw_index, "smart": names.smart_index},
-            "agent_filter": {"simple": None, "smart": "document_type chosen per question from " + ", ".join(
-                sorted({v for v in predicted.values() if v not in ("needs_review", "unclassified", "cannot_tell")}))},
+            "agent_filter": {"simple": None, "smart": f"derived per question by knowledge base {names.knowledge_base} "
+                             "from " + ", ".join(sorted({v for v in predicted.values() if v not in (
+                                 "needs_review", "unclassified", "cannot_tell")}))},
             "scoring_profile": SCORING_PROFILE,
             "chat_deployment": env.chat_deployment,
             "embedding_deployment": env.embedding_deployment,

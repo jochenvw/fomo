@@ -112,6 +112,19 @@ class ParticipantNames:
     def smart_rag_agent(self) -> str:
         return f"{self.hackername}-smart-rag"
 
+    @property
+    def knowledge_source(self) -> str:
+        return f"{self.hackername}-smart-ks"
+
+    @property
+    def knowledge_base(self) -> str:
+        return f"{self.hackername}-smart-kb"
+
+    @property
+    def knowledge_base_connection(self) -> str:
+        """Foundry project connection (RemoteTool) Smart RAG uses to reach the knowledge base MCP endpoint."""
+        return f"{self.hackername}-smart-kb-mcp"
+
     def smart_route_agent(self, route: str) -> str:
         if route == "contract":
             return self.smart_rag_agent
@@ -137,6 +150,9 @@ class ParticipantNames:
             "smart_index": self.smart_index,
             "smart_skillset": self.smart_skillset,
             "smart_indexer": self.smart_indexer,
+            "knowledge_source": self.knowledge_source,
+            "knowledge_base": self.knowledge_base,
+            "knowledge_base_connection": self.knowledge_base_connection,
             "simple_rag_agent": self.simple_rag_agent,
             "metadata_miner_agent": self.metadata_miner_agent,
             "smart_rag_agent": self.smart_rag_agent,

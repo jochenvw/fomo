@@ -18,8 +18,8 @@ from ..agents.prompt import (
     PromptAgents,
     agent_specs,
     document_scopes,
-    ensure_openapi_connection,
-    openapi_connection_exists,
+    ensure_kb_connection,
+    kb_connection_exists,
     smart_spec,
 )
 from ..config import Environment
@@ -31,6 +31,7 @@ from ..miner.pipeline import Miner
 from ..naming import ParticipantNames
 from ..plan import Plan
 from ..search.client import SearchClient
+from ..search.knowledge import KB_API_VERSION, KnowledgeClient
 from ..telemetry.logging import RunLogger, write_trace
 from .participant import container_client, remember, run_dir, status, write_manifest
 from .starter import write_starter
@@ -83,41 +84,81 @@ def _new_plan(op: str, env: Environment, names: ParticipantNames) -> Plan:
 
 
 # ---- provision -------------------------------------------------------------------------------
+PROVISION_STEPS = ("upload", "index", "agent")
+
+
+def _steps(step: str) -> tuple[str, ...]:
+    if step == "all":
+        return PROVISION_STEPS
+    if step not in PROVISION_STEPS:
+        raise ValueError(step)
+    return (step,)
+
+
+def check_provision_prerequisites(state: dict[str, Any], step: str) -> None:
+    """A single step (guided mode) must follow the previous one; `all` runs them in order itself."""
+    if step == "index" and not _st(state, "container").get("documents"):
+        raise Blocked("your container has no documents yet, so there is nothing to index",
+                      fix="run `uv run fomo provision --step upload` first")
+    if step == "agent" and not _st(state, "raw_index").get("chunks"):
+        raise Blocked("the raw index has no chunks yet, so Simple RAG would have nothing to search",
+                      fix="run `uv run fomo provision --step index` first")
+
+
 def plan_provision(env: Environment, names: ParticipantNames, state: dict[str, Any], *,
-                   smoke: bool = True) -> Plan:
-    p = _new_plan("provision", env, names)
-    c = _st(state, "container")
-    p.add("create", f"blob container {names.container}", "participant inbox",
-          state="exists" if c.get("exists") else "pending")
-    docs = c.get("documents", 0)
-    p.add("upload", "25 synthetic corpus documents", "idempotent, checksummed, never overwrites edits",
-          state="exists" if docs >= 25 else "pending")
-    raw_ok = bool(_st(state, "raw_index").get("chunks"))
-    p.add("create", f"search {names.datasource}, {names.raw_index}, {names.raw_skillset}, {names.raw_indexer}",
-          "raw baseline (no classification fields)", state="exists" if raw_ok else "pending")
-    p.add("run", f"indexer {names.raw_indexer}", "extract, chunk, embed; wait for success",
-          cost="" if raw_ok else _embed_cost())
-    p.add("create", f"prompt agent {names.simple_rag_agent}", f"{env.chat_deployment} + Search tool on "
-          f"{names.raw_index}, no filter", state="exists" if _agent_exists(state, "simple_rag") else "pending")
-    if smoke:
-        p.add("invoke", f"{names.simple_rag_agent}", "smoke test: canonical contracts question", cost=_agent_cost())
-    smart = _st(state, "smart_indexer")
-    p.add("create", f"search {names.smart_index}, {names.smart_skillset}, {names.smart_indexer}",
-          "smart schema, indexer created DISABLED (pending until classification)",
-          state="exists" if smart.get("exists") else "pending")
-    starter = Path(names.run_dir) / "miner" / "classifier.yaml"
-    p.add("write", f"{names.run_dir}/miner/", "editable classifier starter (local files only)",
-          state="exists" if starter.exists() else "pending")
+                   smoke: bool = True, step: str = "all") -> Plan:
+    steps = _steps(step)
+    p = _new_plan("provision" if step == "all" else f"provision --step {step}", env, names)
+    if "upload" in steps:
+        c = _st(state, "container")
+        p.add("create", f"blob container {names.container}", "participant inbox",
+              state="exists" if c.get("exists") else "pending")
+        docs = c.get("documents", 0)
+        p.add("upload", "25 synthetic corpus documents", "idempotent, checksummed, never overwrites edits",
+              state="exists" if docs >= 25 else "pending")
+    if "index" in steps:
+        raw_ok = bool(_st(state, "raw_index").get("chunks"))
+        p.add("create", f"search {names.datasource}, {names.raw_index}, {names.raw_skillset}, {names.raw_indexer}",
+              "raw baseline (no classification fields)", state="exists" if raw_ok else "pending")
+        p.add("run", f"indexer {names.raw_indexer}", "extract, chunk, embed; wait for success",
+              cost="" if raw_ok else _embed_cost())
+        smart = _st(state, "smart_indexer")
+        p.add("create", f"search {names.smart_index}, {names.smart_skillset}, {names.smart_indexer}",
+              "smart schema, indexer created DISABLED (pending until classification)",
+              state="exists" if smart.get("exists") else "pending")
+    if "agent" in steps:
+        p.add("create", f"prompt agent {names.simple_rag_agent}", f"{env.chat_deployment} + Search tool on "
+              f"{names.raw_index}, no filter", state="exists" if _agent_exists(state, "simple_rag") else "pending")
+        if smoke:
+            p.add("invoke", f"{names.simple_rag_agent}", "smoke test: canonical contracts question",
+                  cost=_agent_cost())
+        starter = Path(names.run_dir) / "miner" / "classifier.yaml"
+        p.add("write", f"{names.run_dir}/miner/", "editable classifier starter (local files only)",
+              state="exists" if starter.exists() else "pending")
     p.notes.append("shared resources (Foundry, models, Search service, storage account) are reused, never changed")
     p.notes.append("hackername is a namespace label; isolation comes from RBAC scopes, not names")
     return p
 
 
 def apply_provision(env: Environment, names: ParticipantNames, log: RunLogger, *, smoke: bool = True,
-                    state: dict[str, Any] | None = None) -> dict[str, Any]:
-    out: dict[str, Any] = {"participant": names.hackername}
+                    state: dict[str, Any] | None = None, step: str = "all") -> dict[str, Any]:
+    steps = _steps(step)
+    out: dict[str, Any] = {"participant": names.hackername, "step": step}
     remember(names)
     search = SearchClient(env)
+    if "upload" in steps:
+        _apply_upload(env, names, log, out)
+    if "index" in steps:
+        _apply_index(env, names, log, out, search)
+    if "agent" in steps:
+        _apply_agent(env, names, log, out, smoke=smoke)
+    final = status(env, names)
+    write_manifest(env, names, final)
+    out["status"] = final
+    return out
+
+
+def _apply_upload(env: Environment, names: ParticipantNames, log: RunLogger, out: dict[str, Any]) -> None:
     with log.stage("ingest"):
         rep = ingest_corpus(container_client(env, names))
         log.info(f"container {names.container}: {len(rep.uploaded)} uploaded, {len(rep.unchanged)} unchanged, "
@@ -126,6 +167,10 @@ def apply_provision(env: Environment, names: ParticipantNames, log: RunLogger, *
             log.warning(f"{len(rep.conflicts)} blob(s) differ from the corpus and were NOT overwritten: "
                         + ", ".join(rep.conflicts[:5]))
         out["ingest"] = {"uploaded": rep.uploaded, "unchanged": len(rep.unchanged), "conflicts": rep.conflicts}
+
+
+def _apply_index(env: Environment, names: ParticipantNames, log: RunLogger, out: dict[str, Any],
+                 search: SearchClient) -> None:
     with log.stage("raw-index"):
         created = search.ensure_participant(names, smart=False)
         log.info("search raw objects: " + ", ".join(f"{k} {v}" for k, v in created.items()))
@@ -144,6 +189,16 @@ def apply_provision(env: Environment, names: ParticipantNames, log: RunLogger, *
         log.info(f"{names.raw_index}: {chunks} chunks; top hit for the canonical question: "
                  + (f"{hits[0].get('doc_id')} '{hits[0].get('title')}' {hits[0].get('url')}" if hits else "none"))
         out["raw"] = {"run": run.__dict__, "chunks": chunks, "top": hits}
+    with log.stage("smart-pending"):
+        current = search.get("indexers", names.smart_indexer)
+        pending = current is None or bool(current.get("disabled"))
+        search.ensure_participant(names, smart=True, pending=pending)
+        log.info(f"smart index {names.smart_index}: schema ready; indexer "
+                 + ("disabled (pending classification)" if pending else "already enabled, left as is"))
+
+
+def _apply_agent(env: Environment, names: ParticipantNames, log: RunLogger, out: dict[str, Any], *,
+                 smoke: bool) -> None:
     agents = PromptAgents(env)
     specs = agent_specs(env, names)
     with log.stage("simple-rag"):
@@ -158,18 +213,8 @@ def apply_provision(env: Environment, names: ParticipantNames, log: RunLogger, *
                 log.warning("agent answered without citations; check the project Search connection (preflight)")
             out["simple_rag"]["smoke"] = {"cited": ans.cited_doc_ids, "latency_ms": ans.latency_ms,
                                           "answer": ans.text[:600]}
-    with log.stage("smart-pending"):
-        current = search.get("indexers", names.smart_indexer)
-        pending = current is None or bool(current.get("disabled"))
-        search.ensure_participant(names, smart=True, pending=pending)
-        log.info(f"smart index {names.smart_index}: schema ready; indexer "
-                 + ("disabled (pending classification)" if pending else "already enabled, left as is"))
     folder, created_starter = write_starter(names)
     log.info(f"miner starter {'created' if created_starter else 'kept (your edits)'}: {folder}")
-    final = status(env, names)
-    write_manifest(env, names, final)
-    out["status"] = final
-    return out
 
 
 PROVISION_NEXT = """next:
@@ -312,15 +357,26 @@ def plan_smart(env: Environment, names: ParticipantNames, state: dict[str, Any],
           .get("disabled") else "ensure definition")
     p.add("run", f"indexer {names.smart_indexer}", ("reset + " if reset else "") + "index blob metadata as "
           "filterable document_type; wait and verify", cost=_embed_cost())
-    p.add("create", f"project connection {env.search_openapi_connection_name}",
-          "OpenAPI, project managed identity -> Search (Search Index Data Reader already granted)",
-          state="exists" if openapi_connection_exists(env) else "pending")
-    p.add("create", f"prompt agent {names.smart_rag_agent}", "same model/top_k/hybrid search as Simple RAG; "
-          f"index {names.smart_index}; agent picks the document_type filter per question from "
-          f"{', '.join(cfg.labels)} (only types present in the index)",
+    kb = KnowledgeClient(env)
+    p.add("update", f"index {names.smart_index}", "ensure semantic configuration (the knowledge source "
+          "reranks with it; Simple RAG's raw index is unchanged)")
+    p.add("create", f"knowledge source {names.knowledge_source}", f"Foundry IQ ({KB_API_VERSION}) over "
+          f"{names.smart_index}; document_type query hint = classifier labels present in the index "
+          f"({', '.join(cfg.labels)}) with their definitions",
+          state="exists" if _kb_exists(kb, "knowledgesources", names.knowledge_source) else "pending")
+    p.add("create", f"knowledge base {names.knowledge_base}", f"query planner {env.chat_deployment}, reasoning "
+          f"effort {env.kb_reasoning_effort}: derives the document_type filter per question",
+          cost="per question: query-planning tokens + semantic ranker (Search semantic plan)",
+          state="exists" if _kb_exists(kb, "knowledgebases", names.knowledge_base) else "pending")
+    p.add("create", f"project connection {names.knowledge_base_connection}",
+          "RemoteTool, project managed identity -> knowledge base MCP endpoint (Search Index Data Reader "
+          "already granted)", state="exists" if kb_connection_exists(env, names) else "pending")
+    p.add("create", f"prompt agent {names.smart_rag_agent}", "same model and grounding rules as Simple RAG; "
+          f"one MCP tool: knowledge_base_retrieve on {names.knowledge_base}",
           state="exists" if _agent_exists(state, "smart_rag") else "pending")
     if smoke:
-        p.add("invoke", names.smart_rag_agent, "smoke test: canonical contracts question", cost=_agent_cost())
+        p.add("invoke", names.smart_rag_agent, "smoke test: canonical contracts question, plus one knowledge base "
+              "retrieve to show the generated filter", cost=_agent_cost())
     p.notes.append(f"routing definitions: {classifier or REFERENCE_CONFIG.name + ' (reference)'}")
     return p
 
@@ -350,22 +406,38 @@ def apply_smart(env: Environment, names: ParticipantNames, log: RunLogger, *, sm
                 fix="run the miner first (`fomo miner run --hosted --apply`), then rerun `fomo smart --apply`")
         log.info(f"routable document types: {', '.join(scopes)}")
         out["smart"] = {"run": run.__dict__, "facets": facets, "scopes": list(scopes)}
+    with log.stage("knowledge-base"):
+        kb = KnowledgeClient(env)
+        kb.ensure(names, scopes)
+        log.info(f"knowledge source {names.knowledge_source} (document_type hint: {', '.join(scopes)}) and "
+                 f"knowledge base {names.knowledge_base} ({env.chat_deployment}, effort {env.kb_reasoning_effort})")
+        if ensure_kb_connection(env, names):
+            log.info(f"created project connection {names.knowledge_base_connection}")
+        out["knowledge_base"] = {"knowledge_source": names.knowledge_source, "knowledge_base": names.knowledge_base,
+                                 "connection": names.knowledge_base_connection}
     with log.stage("smart-rag"):
-        if ensure_openapi_connection(env):
-            log.info(f"created project connection {env.search_openapi_connection_name}")
         agents = PromptAgents(env)
-        version = agents.ensure(smart_spec(env, names, scopes))
-        log.info(f"prompt agent {names.smart_rag_agent} v{version} (index {names.smart_index}, "
-                 f"filter chosen per question from {', '.join(scopes)})")
+        version = agents.ensure(smart_spec(env, names))
+        log.info(f"prompt agent {names.smart_rag_agent} v{version} (knowledge base {names.knowledge_base})")
         out["smart_rag"] = {"name": names.smart_rag_agent, "version": version, "scopes": list(scopes)}
         if smoke:
-            ans = agents.ask(names.smart_rag_agent, canonical_question())
-            chosen = ", ".join(f or "no filter" for f in ans.filters) or "no search call"
-            log.info(f"smoke: filter {chosen}; cited {', '.join(ans.cited_doc_ids) or 'nothing'} "
-                     f"({ans.latency_ms} ms)")
-            out["smart_rag"]["smoke"] = {"filters": ans.filters, "cited": ans.cited_doc_ids,
-                                         "latency_ms": ans.latency_ms}
+            question = canonical_question()
+            retrieval = kb.retrieve(names, question)
+            chosen = ", ".join(dict.fromkeys(f or "no filter" for f in retrieval.filters)) or "no search call"
+            log.info(f"smoke: knowledge base filter {chosen} ({len(retrieval.filters)} subqueries); "
+                     f"retrieved {', '.join(retrieval.doc_ids) or 'nothing'}")
+            ans = agents.ask(names.smart_rag_agent, question)
+            log.info(f"smoke: Smart RAG cited {', '.join(ans.cited_doc_ids) or 'nothing'} ({ans.latency_ms} ms)")
+            out["smart_rag"]["smoke"] = {"filters": retrieval.filters, "retrieved": retrieval.doc_ids,
+                                         "cited": ans.cited_doc_ids, "latency_ms": ans.latency_ms}
     return out
+
+
+def _kb_exists(kb: KnowledgeClient, kind: str, name: str) -> bool:
+    try:
+        return kb.get(kind, name) is not None
+    except WorkshopError:
+        return False
 
 
 # ---- evaluation ------------------------------------------------------------------------------

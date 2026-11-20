@@ -69,6 +69,11 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("provision", help="participant baseline: container, docs, raw index, Simple RAG, starter")
     _common(p, writes=True)
     p.add_argument("--no-smoke", action="store_true", help="skip the Simple RAG smoke question")
+    p.add_argument("--step", choices=("all", "upload", "index", "agent"), default="all",
+                   help="guided mode: upload documents, build the raw index, or create Simple RAG (default: all)")
+
+    p = sub.add_parser("next", help="where am I in the workshop and what is the next step (read-only)")
+    _common(p)
 
     p = sub.add_parser("miner", help="hosted Metadata Miner: deploy / run")
     msub = p.add_subparsers(dest="miner_command", required=True, metavar="action")
@@ -339,7 +344,13 @@ def _preflight_fix(ctx: Ctx, report: Any) -> int:
 
 
 def cmd_provision(args: argparse.Namespace) -> int:
-    from .provision.ops import PROVISION_NEXT, apply_provision, links, plan_provision
+    from .provision.ops import (
+        PROVISION_NEXT,
+        apply_provision,
+        check_provision_prerequisites,
+        links,
+        plan_provision,
+    )
     from .provision.participant import render_status, status
 
     ctx = Ctx(args, "provision")
@@ -348,13 +359,46 @@ def cmd_provision(args: argparse.Namespace) -> int:
     if not ctx.json:
         print(banner("robot", f"🛠️ FOMO Provision for {names.hackername}"), file=sys.stderr)
     state = status(ctx.env, names)
-    plan = plan_provision(ctx.env, names, state, smoke=not args.no_smoke)
+    step = args.step
+    if ctx.mode() != "check":
+        check_provision_prerequisites(state, step)
+    plan = plan_provision(ctx.env, names, state, smoke=not args.no_smoke, step=step)
 
     def after(result: dict[str, Any]) -> str:
-        return (render_status(result["status"]) + "\n\n" + "\n".join(links(ctx.env, names)) + "\n\n"
-                + PROVISION_NEXT.format(run_dir=names.run_dir))
-    return write_flow(ctx, plan, lambda: apply_provision(ctx.env, names, ctx.log, smoke=not args.no_smoke),
+        tail = (PROVISION_NEXT.format(run_dir=names.run_dir) if step in ("all", "agent")
+                else "next: uv run fomo next")
+        return (render_status(result["status"]) + "\n\n" + "\n".join(links(ctx.env, names)) + "\n\n" + tail)
+    return write_flow(ctx, plan, lambda: apply_provision(ctx.env, names, ctx.log, smoke=not args.no_smoke,
+                                                         step=step),
                       after=after, check=lambda: render_status(state) if not ctx.json else state)
+
+
+def cmd_next(args: argparse.Namespace) -> int:
+    from . import guide
+    from .config import load_participant
+
+    ctx = Ctx(args, "next")
+    values: dict[str, str] = {}
+    missing = ctx.env.missing()
+    participant = args.participant or load_participant()
+    if missing or not participant:
+        reason = (f"workshop environment incomplete: {', '.join(missing)}" if missing
+                  else "no hackername saved yet")
+        result = guide.build("preflight", values, reason=reason)
+    else:
+        from .data.corpus import load_manifest
+        from .provision.participant import status
+
+        names = ctx.names()
+        values = {"container": names.container, "raw_index": names.raw_index, "raw_indexer": names.raw_indexer,
+                  "smart_index": names.smart_index, "simple_rag": names.simple_rag_agent,
+                  "metadata_miner": names.metadata_miner_agent, "run_dir": names.run_dir}
+        state = status(ctx.env, names)
+        result = guide.next_checkpoint(state, values, expected_docs=len(load_manifest()[1]),
+                                       classifier=Path(names.run_dir) / "miner" / "classifier.yaml")
+    data = result.to_dict() | {"participant": participant}
+    ctx.out((f"participant {participant}\n" if participant else "") + guide.render(result), data)
+    return EXIT_OK
 
 
 def cmd_miner(args: argparse.Namespace) -> int:
@@ -398,8 +442,9 @@ def cmd_smart(args: argparse.Namespace) -> int:
     def after(r: dict[str, Any]) -> str:
         s = r["smart"]
         return (f"{names.smart_index}: document_type facets {s['facets']}\n"
-                f"Smart RAG: {r['smart_rag']['name']} v{r['smart_rag']['version']}, routes per question to "
-                f"{', '.join(s['scopes'])}\nnext: uv run fomo eval")
+                f"Smart RAG: {r['smart_rag']['name']} v{r['smart_rag']['version']} via knowledge base "
+                f"{names.knowledge_base}; filter derived per question from {', '.join(s['scopes'])}"
+                f"\nnext: uv run fomo eval")
     return write_flow(ctx, plan, lambda: ops.apply_smart(ctx.env, names, ctx.log, smoke=not args.no_smoke,
                                                          reset=args.reset, classifier=args.classifier),
                       after=after)
@@ -730,8 +775,9 @@ def cmd_agents(args: argparse.Namespace) -> int:
     question = args.question or canonical_question()
     ans = PromptAgents(ctx.env).ask(agent, question)
     data = {"agent": agent, "question": question, "answer": ans.text, "cited": ans.cited_doc_ids,
-            "filters": ans.filters, "latency_ms": ans.latency_ms, "tool_calls": ans.tool_calls}
-    routed = ("\nfilter chosen: " + ", ".join(f or "none" for f in ans.filters)) if ans.filters else ""
+            "document_types": ans.document_types, "latency_ms": ans.latency_ms, "tool_calls": ans.tool_calls}
+    routed = ("\nretrieved document types: " + ", ".join("/".join(t) or "none" for t in ans.document_types)
+              if ans.document_types else "")
     ctx.out(f"{agent} ({ans.latency_ms} ms, {ans.tool_calls} search call(s))\nQ: {question}\n\n{ans.text}\n\n"
             f"cited: {', '.join(ans.cited_doc_ids) or 'nothing'}{routed}", data)
     return EXIT_OK
@@ -794,7 +840,7 @@ def cmd_facilitator(args: argparse.Namespace) -> int:
 
 
 COMMANDS: dict[str, Callable[[argparse.Namespace], int]] = {
-    "preflight": cmd_preflight, "provision": cmd_provision, "miner": cmd_miner, "smart": cmd_smart,
+    "preflight": cmd_preflight, "provision": cmd_provision, "next": cmd_next, "miner": cmd_miner, "smart": cmd_smart,
     "eval": cmd_eval, "eval-foundry": cmd_eval_foundry, "eval-ladder": cmd_eval_ladder,
     "cheatcode": cmd_cheatcode, "status": cmd_status,
     "reset-participant": cmd_reset,

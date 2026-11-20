@@ -4,9 +4,9 @@
 
 | Service | Objects | Counts against |
 |---|---|---|
-| AI Search | 2 indexes, 2 indexers, 2 skillsets, 1 data source | service object limits |
+| AI Search | 2 indexes, 2 indexers, 2 skillsets, 1 data source, 1 knowledge source, 1 knowledge base | service object limits |
 | Blob | 1 container, 25 docs (~1 MB) | nothing material |
-| Foundry | 2 prompt agents, 1 hosted agent (+ versions) | project agent limits |
+| Foundry | 2 prompt agents, 1 hosted agent (+ versions), 1 project connection (Smart RAG MCP) | project agent limits |
 | RBAC | 2 role assignments for the hosted agent | subscription limit (4,000) |
 
 ## 2. Search SKU sizing
@@ -29,7 +29,8 @@ uv run fomo capacity --participants 40 --sku standard2 --replicas 2 --hours 8
 | Item | Driver | Estimate |
 |---|---|---|
 | AI Search | SKU × replicas × hours | dominant; Basic ~$0.82/8 h, S2 materially more |
-| Chat (`gpt-5-mini`) | Simple + Smart RAG + eval answers | ~$1.6 |
+| Chat (`gpt-5-mini`) | Simple + Smart RAG + eval answers + knowledge base query planning | ~$1.6 + planning tokens |
+| Semantic ranker | Smart RAG only: ~100 reranked queries per participant | plan `standard` (free plan: 1,000/month, too few for 40) |
 | Embeddings | 25 docs × 2 indexes × N + queries | < $0.05 |
 | Decision-1 | ~3M input tokens (25 docs × ~1.5k × 2-3 runs × 40) | pricing not public at time of writing; check Foundry pricing |
 | Hosted agents | compute while active | scale-to-zero; check Foundry pricing |

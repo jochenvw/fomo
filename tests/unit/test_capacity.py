@@ -13,7 +13,8 @@ from fomo.capacity import (
 
 
 def test_required_objects_per_participant():
-    assert required_objects(1) == {"indexes": 2, "indexers": 2, "skillsets": 2, "datasources": 1}
+    assert required_objects(1) == {"indexes": 2, "indexers": 2, "skillsets": 2, "datasources": 1,
+                                   "knowledge_sources": 1, "knowledge_bases": 1}
     assert required_objects(40)["indexes"] == 80
 
 

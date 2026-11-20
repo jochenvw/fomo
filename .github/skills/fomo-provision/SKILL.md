@@ -52,14 +52,19 @@ retry safe reads, offer approved target-recovery choices, and inspect uncertain 
    pass the generated name explicitly on apply so plan and apply match).
    Result: queryable raw index, Simple RAG agent with a cited smoke-test answer, starter in
    `.workshop/runs/<hackername>/miner/`.
+   For a guided, explained walk-through use `/fomo-help`: it runs the same baseline as
+   `--step upload`, `--step index` and `--step agent`, each with its own plan and approval.
 3. Participant exercise - the classifier is theirs to improve:
    - edit `.workshop/runs/<hackername>/miner/classifier.yaml` (finish the TODOs, bump `version`);
    - try it read-only: `uv run python .workshop/runs/<hackername>/miner/try_classifier.py doc-003 doc-018`.
 4. `uv run fomo miner deploy --classifier .workshop/runs/<hackername>/miner/classifier.yaml`
    (hosted Foundry agent + its two least-privilege grants).
 5. `uv run fomo miner run --hosted` (delta: unchanged documents are skipped).
-6. `uv run fomo smart` (enable smart indexer, create Smart RAG, which picks the `document_type`
-   filter per question from the classifier's labels; pass `--classifier` with the participant's file).
+6. `uv run fomo smart` (enable smart indexer, create the participant's Foundry IQ knowledge source +
+   knowledge base and its MCP project connection, then Smart RAG; the knowledge base derives the
+   `document_type` filter per question from the classifier's labels and definitions; pass
+   `--classifier` with the participant's file). The plan lists the knowledge base's query-planning
+   tokens and semantic-ranker queries as costs; the smoke test prints the generated filter.
 7. `uv run fomo eval` (read-only apart from agent calls): before/after table with actual
    top-k hits, filters and citations. Report honestly if Smart RAG does not improve.
    For scored comparisons in the Foundry portal, use

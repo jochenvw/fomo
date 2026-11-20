@@ -12,15 +12,20 @@ import math
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
-# Objects one participant owns on the shared Search service.
-PER_PARTICIPANT = {"indexes": 2, "indexers": 2, "skillsets": 2, "datasources": 1}
+# Objects one participant owns on the shared Search service. Smart RAG adds one Foundry IQ knowledge
+# source + knowledge base (smart index only; Simple RAG uses none).
+PER_PARTICIPANT = {"indexes": 2, "indexers": 2, "skillsets": 2, "datasources": 1,
+                   "knowledge_sources": 1, "knowledge_bases": 1}
+
+
+def _limits(n: int) -> dict[str, int]:
+    """Knowledge sources and knowledge bases share the index limit per tier."""
+    return {k: n for k in PER_PARTICIPANT}
+
 
 SEARCH_LIMITS: dict[str, dict[str, int]] = {
-    "free": {"indexes": 3, "indexers": 3, "skillsets": 3, "datasources": 3},
-    "basic": {"indexes": 15, "indexers": 15, "skillsets": 15, "datasources": 15},
-    "standard": {"indexes": 50, "indexers": 50, "skillsets": 50, "datasources": 50},
-    "standard2": {"indexes": 200, "indexers": 200, "skillsets": 200, "datasources": 200},
-    "standard3": {"indexes": 200, "indexers": 200, "skillsets": 200, "datasources": 200},
+    "free": _limits(3), "basic": _limits(15), "standard": _limits(50),
+    "standard2": _limits(200), "standard3": _limits(200),
 }
 
 # USD per search unit per month (approximate list price, 2026 snapshot).
@@ -38,6 +43,13 @@ CORPUS_DOCS = 25
 DECISION_INPUT_TOKENS_PER_DOC = 1000
 EMBEDDING_TOKENS_PER_INDEX = 12_000
 AGENT_TOKENS_PER_QUESTION = {"input": 2_900, "output": 1_600}
+# Smart RAG knowledge base query planning on the same chat deployment, per question at effort
+# medium (measured: 2 planning passes, ~4.8k input + ~0.3k output; effort low ~ half).
+KB_PLANNING_TOKENS_PER_QUESTION = {"input": 4_800, "output": 300}
+# Smart RAG knowledge base: each question runs 1-3 semantically reranked subqueries. ~100 per participant
+# covers smoke tests, `fomo eval`, both Foundry eval suites and ad-hoc questions.
+SEMANTIC_QUERIES_PER_PARTICIPANT = 100
+SEMANTIC_FREE_QUERIES = 1000  # per month on the semantic ranker 'free' plan
 
 
 @dataclass
@@ -141,9 +153,9 @@ def capacity_report(participants: int, search_sku: str, *, current: dict[str, in
 def render(rep: CapacityReport) -> str:
     lines = [f"{rep.participants} participants on Search '{rep.search_sku}': "
              + ("FITS" if rep.fits else "DOES NOT FIT")]
-    lines.append(f"  {'object':<12}{'need':>6}{'in use':>8}{'limit':>7}{'headroom':>10}")
+    lines.append(f"  {'object':<18}{'need':>6}{'in use':>8}{'limit':>7}{'headroom':>10}")
     for k in PER_PARTICIPANT:
-        lines.append(f"  {k:<12}{rep.required[k]:>6}{rep.current.get(k, 0):>8}{rep.limits[k]:>7}{rep.headroom[k]:>10}")
+        lines.append(f"  {k:<18}{rep.required[k]:>6}{rep.current.get(k, 0):>8}{rep.limits[k]:>7}{rep.headroom[k]:>10}")
     lines.append(f"  max participants at this SKU: {rep.participants_max}; recommended SKU: {rep.recommended_sku}")
     c = rep.cost
     lines.append(f"  cost (~{c['search_hours']:.0f} h, list prices): Search ${c['search_usd']}, chat ${c['chat_usd']}, "

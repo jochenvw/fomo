@@ -425,7 +425,7 @@ def _comparable(definition: dict[str, Any]) -> dict[str, Any]:
 def inspect(env: Environment, names: ParticipantNames, rows: list[dict[str, Any]], judge: str) -> dict[str, Any]:
     """Read-only checks: Simple RAG exists, route agents differ from it only in index/filter, identical index
     contents, evidence live, distinct judge model available, evaluators available, and which route agents
-    need creating. The deployed Smart RAG (OpenAPI tool, routes itself) is not a ladder variant."""
+    need creating. The deployed Smart RAG (Foundry IQ knowledge base) is not a ladder variant."""
     agents = PromptAgents(env)
     project = agents.client
     existing: dict[str, dict[str, Any]] = {}

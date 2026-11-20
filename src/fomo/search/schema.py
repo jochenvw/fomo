@@ -17,6 +17,7 @@ API_VERSION = "2025-09-01"
 VECTOR_PROFILE = "vec-profile"
 VECTORIZER = "aoai-vectorizer"
 SCORING_PROFILE = "boost-contracts"
+SEMANTIC_CONFIG = "fomo-semantic"
 
 CLASSIFICATION_FIELDS = ("document_type", "classification_confidence", "classification_version")
 
@@ -81,6 +82,12 @@ def index_definition(env: Environment, name: str, *, smart: bool) -> dict[str, A
     body: dict[str, Any] = {"name": name, "fields": fields, "vectorSearch": _vector_search(env)}
     if smart:
         fields.extend(_classification_fields())
+        # Required by the Foundry IQ knowledge source (semantic reranking of its subqueries). Simple RAG's
+        # built-in tool queries the raw index with vector_simple_hybrid and never uses semantic ranking.
+        body["semantic"] = {"defaultConfiguration": SEMANTIC_CONFIG, "configurations": [{
+            "name": SEMANTIC_CONFIG, "prioritizedFields": {
+                "titleField": {"fieldName": "title"},
+                "prioritizedContentFields": [{"fieldName": "content"}]}}]}
         # Optional second experiment (boosting). Only used by direct evaluation queries that pass
         # scoringProfile + scoringParameters; the Foundry tool does not.
         body["scoringProfiles"] = [

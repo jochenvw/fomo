@@ -16,7 +16,9 @@ from fomo.errors import PermissionDenied
     [
         (["preflight", "--participants", "40", "--smoke"], {"command": "preflight", "participants": 40, "smoke": True}),
         (["provision", "--participant", "x", "--apply", "--yes"],
-         {"command": "provision", "participant": "x", "apply": True, "yes": True}),
+         {"command": "provision", "participant": "x", "apply": True, "yes": True, "step": "all"}),
+        (["provision", "--step", "upload"], {"command": "provision", "step": "upload", "apply": False}),
+        (["next", "--output", "json"], {"command": "next", "output": "json"}),
         (["miner", "deploy", "--classifier", "f"], {"miner_command": "deploy", "classifier": Path("f")}),
         (["miner", "run", "--hosted", "--mode", "delta"],
          {"miner_command": "run", "hosted": True, "local": False, "mode": "delta"}),

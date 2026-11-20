@@ -69,11 +69,8 @@ def dashboard(env: Environment, *, readiness_dir: Path | None = None, workers: i
 
     with ThreadPoolExecutor(max_workers=workers) as pool:
         rows = list(pool.map(one, hackernames))
-    stats = SearchClient(env).service_stats().get("counters", {})
-    current = {"indexes": stats.get("indexesCount", {}).get("usage", 0),
-               "indexers": stats.get("indexersCount", {}).get("usage", 0),
-               "skillsets": stats.get("skillsetCount", {}).get("usage", 0),
-               "datasources": stats.get("dataSourcesCount", {}).get("usage", 0)}
+    from .search.knowledge import service_usage
+    current = service_usage(env)
     sku = (env.search_sku or "basic").lower()
     cap = capacity.capacity_report(0, sku, current=current)
     out: dict[str, Any] = {

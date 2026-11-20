@@ -38,7 +38,6 @@ BICEP_OUTPUTS = {
     "SEARCH_ENDPOINT": "search_endpoint",
     "SEARCH_SKU": "search_sku",
     "SEARCH_CONNECTION_NAME": "search_connection_name",
-    "SEARCH_OPENAPI_CONNECTION_NAME": "search_openapi_connection_name",
 }
 
 
@@ -59,6 +58,9 @@ class Environment:
     project_endpoint: str = ""
 
     chat_deployment: str = "gpt-5-mini"
+    chat_model: str = ""  # model name behind chat_deployment; empty = same as the deployment name
+    # Foundry IQ query planning effort for Smart RAG's knowledge base: low | medium.
+    kb_reasoning_effort: str = "medium"
     embedding_deployment: str = "text-embedding-3-small"
     embedding_model: str = "text-embedding-3-small"
     embedding_dimensions: int = 1536
@@ -72,7 +74,6 @@ class Environment:
     search_endpoint: str = ""
     search_sku: str = ""
     search_connection_name: str = "fomo-search"
-    search_openapi_connection_name: str = "fomo-search-openapi"
 
     deployment_name: str = ""
     extra: dict[str, Any] = field(default_factory=dict)

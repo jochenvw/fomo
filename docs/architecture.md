@@ -10,12 +10,20 @@ better prompt but **better metadata**: a hosted *Metadata Miner* classifies ever
 index makes it filterable, and *Smart RAG* decides per question which `document_type` holds the
 answer ("payment terms" → `contract`) and searches only that type.
 
-Smart RAG's search tool is an **OpenAPI tool** over the Search REST API, not the built-in Search
-tool: the built-in tool fixes its filter per agent version and allows one tool per agent. The tool's
-`filter` parameter is an enum of `document_type eq '<label>'`; each option carries the classifier's
-own definition of that label, restricted to labels present in the smart index. The same text that
-labelled the documents tells the agent when to search them. The tool authenticates through the
-project connection `fomo-search-openapi` (project managed identity, Search Index Data Reader).
+Smart RAG searches through a **Foundry IQ knowledge base** (Search preview API
+`2026-11-01-preview`), not the built-in Search tool, whose filter is fixed per agent version.
+Per participant: one knowledge source over the smart index and one knowledge base on top.
+
+- **Routing:** the knowledge source carries a `document_type` *query hint*: the classifier's labels
+  present in the index, each with its own definition (≤1024 characters in total). The knowledge
+  base's query planner (the workshop chat model, reasoning effort `medium` by default,
+  `FOMO_KB_REASONING_EFFORT`) reads the question and emits the `document_type` filter. The same
+  text that labelled the documents decides where to search.
+- **Ranking:** hybrid search + semantic reranking on the smart index (`fomo-semantic`).
+- **Agent wiring:** an MCP tool (`knowledge_base_retrieve`) via project connection
+  `<name>-smart-kb-mcp` (RemoteTool, project managed identity, Search Index Data Reader).
+- **Simple RAG stays vanilla:** built-in Search tool, raw index, hybrid, top 5, no semantic ranker.
+  The comparison therefore measures metadata routing **plus** query planning and reranking.
 
 ## 2. Components
 

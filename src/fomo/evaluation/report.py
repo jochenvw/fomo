@@ -85,7 +85,7 @@ def markdown(report: dict[str, Any]) -> str:
                 if a.get("error"):
                     lines.append(f"- **{a['agent']}**: ERROR {a['error']}")
                     continue
-                routed = ("; filter " + ", ".join(f or "none" for f in a["filters"])) if a.get("filters") else ""
+                routed = "; " + _routing(a) if _routing(a) else ""
                 lines.append(f"- **{a['agent']}** - cited {', '.join(a['cited_doc_ids']) or 'nothing'}; "
                              f"not relevant: {', '.join(a['cited_not_relevant']) or 'none'}{routed}; "
                              f"{a['latency_ms']} ms, {a['input_tokens']} in / {a['output_tokens']} out tokens"
@@ -98,10 +98,20 @@ def markdown(report: dict[str, Any]) -> str:
               "comparison is not fair (e.g. an indexer still running).",
               "- The contract filter helps contract questions and **harms** others (false exclusions). "
               "That is the trade-off of a fixed scope, not a bug.",
-              "- The Smart RAG agent picks its own document_type filter per question (section 5). A wrong "
-              "pick behaves like the fixed filter on the wrong question: relevant documents are excluded.",
+              "- Smart RAG's knowledge base derives its own document_type filter per question (section 5). A "
+              "wrong pick behaves like the fixed filter on the wrong question: relevant documents are excluded.",
               "- Misclassified documents become false exclusions under a filter: check section 4.", ""]
     return "\n".join(lines)
+
+
+def _routing(a: dict[str, Any], *, short: bool = False) -> str:
+    """Knowledge base filter per subquery (when measured) or the document types the agent retrieved."""
+    if a.get("filters"):
+        values = [(f or "none").replace("document_type eq ", "") if short else (f or "none") for f in a["filters"]]
+        return "filter " + ", ".join(dict.fromkeys(values))
+    if a.get("document_types"):
+        return "retrieved types " + ", ".join(dict.fromkeys("/".join(t) or "none" for t in a["document_types"]))
+    return ""
 
 
 def terminal_table(report: dict[str, Any]) -> str:
@@ -124,8 +134,7 @@ def terminal_table(report: dict[str, Any]) -> str:
         if a.get("error"):
             out.append(f"{a['query_id']} {a['role']:6} ERROR {a['error'][:120]}")
         else:
-            routed = (" filter " + ",".join((f or "none").replace("document_type eq ", "") for f in a["filters"])
-                      if a.get("filters") else "")
+            routed = " " + _routing(a, short=True) if _routing(a) else ""
             out.append(f"{a['query_id']} {a['role']:6} cites {','.join(a['cited_doc_ids']) or '-'}"
                        f"  (not relevant: {','.join(a['cited_not_relevant']) or 'none'}){routed} {a['latency_ms']}ms")
     return "\n".join(out)

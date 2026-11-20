@@ -8,9 +8,10 @@ from unittest.mock import Mock
 
 import pytest
 
-from fomo.agents.prompt import agent_specs, cited_in_text, search_openapi_spec
+from fomo.agents.prompt import agent_specs, cited_in_text
 from fomo.errors import Blocked, WorkshopError
 from fomo.evaluation import foundry
+from fomo.search.knowledge import mcp_url
 
 
 def test_seed_dataset_has_real_evidence_and_balanced_scope():
@@ -75,9 +76,10 @@ def _inspection_mocks(monkeypatch, env, names, *, mismatch=False, missing=False)
                           "index_name": simple.index, "filter": None, "top_k": simple.top_k,
                           "query_type": simple.query_type}]}}]},
         smart.name: {"kind": "prompt", "model": smart.model, "instructions": smart.instructions,
-                     "tools": [{"type": "openapi", "openapi": {"name": "contoso_search", "spec": search_openapi_spec(
-                         "https://s.search.windows.net", smart.index, smart.scopes or {}, smart.top_k)}}]},
+                     "tools": [{"type": "mcp", "server_label": "knowledge-base",
+                                "server_url": mcp_url(env, smart.knowledge_base)}]},
     }
+    monkeypatch.setattr(foundry, "_knowledge_base_index", lambda env: {smart.knowledge_base: smart.index}.__getitem__)
     if mismatch:
         definitions[names.smart_rag_agent]["instructions"] = "Different instructions"
     project = Mock()
@@ -211,10 +213,9 @@ def test_search_call_detection_handles_foundry_messages_not_just_output_text():
     assert foundry._search_calls([{"role": "assistant", "content": "Calling search..."}]) == 0
 
 
-def test_openapi_answers_cite_only_retrieved_doc_ids_in_text():
-    output = [{"type": "openapi_call", "arguments": '{"filter": "document_type eq \'contract\'"}'},
-              {"type": "openapi_call_output", "output": json.dumps({"response": json.dumps(
-                  {"value": [{"doc_id": "doc-001"}, {"doc_id": "doc-004"}]})})}]
+def test_knowledge_base_answers_cite_only_retrieved_doc_ids_in_text():
+    docs = [{"content": json.dumps({"doc_id": d, "document_type": "contract"})} for d in ("doc-001", "doc-004")]
+    output = [{"type": "mcp_call", "name": "knowledge_base_retrieve", "output": json.dumps({"documents": docs})}]
     assert foundry._search_calls(output) == 1
     text = "Net 45 (MSA, doc-001); see also doc-099 and (Rig Agreement, doc-004)."
     assert cited_in_text(text, foundry._retrieved(output)) == ["doc-001", "doc-004"]

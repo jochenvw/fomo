@@ -90,15 +90,16 @@ RAW's other hits were doc-002 (policy), doc-003 (presentation), and doc-024
 (correspondence). These retrieval measurements and the Foundry answer measurements above
 are **separate recorded calls**; do not claim identical ranking or document sets.
 
-Show the filter SMART chose; the agent prints it under its answer:
+Show what SMART searched; the CLI prints the document types it retrieved under the answer
+(`fomo eval` also shows the filter the knowledge base generated):
 
 ```text
-filter chosen: document_type eq 'contract'
+retrieved document types: contract
 ```
 
 **Presenter:** "The miner classifies document content and writes metadata to Blob Storage.
-The Search indexer copies `document_type` into a filterable field. The SMART agent reads the
-question, decides that payment terms live in contracts, and supplies this filter itself. Nothing
+The Search indexer copies `document_type` into a filterable field. SMART's knowledge base reads the
+question, decides that payment terms live in contracts, and applies that filter itself. Nothing
 is hardcoded: its options are the classifier's labels and definitions. The generative model and
 retrieval depth are unchanged."
 
@@ -190,7 +191,7 @@ Also measured: re-indexing alone changes nothing (H3, CI ±0.04); the routed var
 oracle filter (H4); clean answers on distractor-heavy contract questions rose 69% → 82-85%,
 but that CI touches 0 (H1 inconclusive, 13 questions). In the ladder the routed variant is a
 Decision 1.1 router + per-type agents orchestrated by the harness; the deployed SMART agent does
-the same routing itself through its OpenAPI search tool.
+the same routing inside its Foundry IQ knowledge base (query planner + `document_type` hint).
 Metadata labels in these indexes were produced by Decision 1; the router used Decision 1.1.
 
 Decision 1.1 updates the **classifier**, not the generative RAG model. These recordings used

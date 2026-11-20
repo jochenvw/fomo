@@ -75,12 +75,19 @@ When IT deploys Foundry with private endpoints and agent VNet injection, preflig
 - **Managed-identity RBAC:** Search -> Storage *Storage Blob Data Reader*; Search -> Foundry
   *Cognitive Services OpenAI User*; Foundry project/account -> Search *Search Index Data Reader*
   (+ *Search Service Contributor*). Each fix names the role, principal ID and scope for IT.
-- **Smart RAG search tool:** an OpenAPI tool calls the Search REST API through project
-  connection `fomo-search-openapi` (project managed identity). With private Search, Agent
-  Service must reach the Search private endpoint (VNet-injected agents); otherwise Smart RAG
-  calls fail while Simple RAG (built-in Search tool) still works. `fomo smart` creates the
-  connection if missing; without *Foundry Project Manager* (or owner rights on the project) ask IT
-  to deploy `infra/modules/search-connection.bicep`.
+- **Smart RAG search tool:** an MCP tool calls the participant's Foundry IQ knowledge base
+  through project connection `<name>-smart-kb-mcp` (RemoteTool, project managed identity).
+  With private Search, Agent Service must reach the Search private endpoint (VNet-injected
+  agents); otherwise Smart RAG calls fail while Simple RAG (built-in Search tool) still works.
+  `fomo smart` creates the connection; it needs *Foundry Project Manager* (or owner rights on the
+  project). The knowledge base's query planner calls the chat deployment as the **Search**
+  identity (*Cognitive Services OpenAI User*, granted by infra).
+- **Foundry IQ knowledge base:** `data.foundry-iq` BLOCKED means the Search service rejects the
+  `2026-11-01-preview` API (region/SKU) or you lack *Search Service Contributor*.
+  `search.semantic` BLOCKED/WARNING: set the semantic ranker plan to `standard`; the `free` plan
+  stops at 1,000 semantic queries/month, which a 40-person cohort exceeds.
+  GPT-4o/4.1 cannot plan with query hints; use a reasoning model (e.g. gpt-5-mini) and set
+  `FOMO_CHAT_MODEL` if the deployment name differs from the model name.
 
 ## 5. Evaluation
 

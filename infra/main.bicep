@@ -226,4 +226,3 @@ output SEARCH_SERVICE_NAME string = search.outputs.searchServiceName
 output SEARCH_ENDPOINT string = search.outputs.searchEndpoint
 output SEARCH_SKU string = searchSku
 output SEARCH_CONNECTION_NAME string = connection.outputs.connectionName
-output SEARCH_OPENAPI_CONNECTION_NAME string = connection.outputs.openapiConnectionName

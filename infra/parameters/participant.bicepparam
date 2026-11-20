@@ -13,7 +13,9 @@ param chatModel = {
   model: 'gpt-5-mini'
   version: '2025-08-07'
   sku: 'GlobalStandard'
-  capacity: 20
+  // 100k TPM: Smart RAG's knowledge base plans on this deployment too (~5k tokens/question);
+  // 20k throttles `fomo eval`. Pay-per-token; capacity itself costs nothing.
+  capacity: 100
 }
 
 param embeddingModel = {
