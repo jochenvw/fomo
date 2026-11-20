@@ -90,15 +90,17 @@ RAW's other hits were doc-002 (policy), doc-003 (presentation), and doc-024
 (correspondence). These retrieval measurements and the Foundry answer measurements above
 are **separate recorded calls**; do not claim identical ranking or document sets.
 
-Show the actual SMART filter:
+Show the filter SMART chose; the agent prints it under its answer:
 
 ```text
-document_type eq 'contract'
+filter chosen: document_type eq 'contract'
 ```
 
 **Presenter:** "The miner classifies document content and writes metadata to Blob Storage.
-The Search indexer copies `document_type` into a filterable field. The SMART agent supplies
-this filter. The generative model, instructions and retrieval depth are unchanged."
+The Search indexer copies `document_type` into a filterable field. The SMART agent reads the
+question, decides that payment terms live in contracts, and supplies this filter itself. Nothing
+is hardcoded: its options are the classifier's labels and definitions. The generative model and
+retrieval depth are unchanged."
 
 Use `smart_nofilter` as the control: merely creating another index should not produce a large
 gain. The restriction enabled by the metadata is the intervention. Ranking can vary between
@@ -116,7 +118,7 @@ uv run fomo agents ask smart  $question --participant $participant
 
 Look for **Master Purchase Terms for Drilling Consumables**, doc-009: **2% within 10 days**.
 It is a contract despite not having "contract" in its title. The raw retrieval also surfaced
-policy/training material; the contract filter removes those types.
+policy/training material; SMART's contract filter removes those types.
 
 This is a **source-selection illustration, not a verified large answer-quality win**: both
 agents answered this correctly in the full Foundry run. Skip it if it adds no visible contrast.
@@ -153,19 +155,20 @@ Open `rag01`; the portal requires access to the project.
 ## 6. Close with the boundary
 
 **Presenter:** "Metadata improves source selection when its filter matches the question.
-A fixed contract filter is not a general-purpose assistant."
+That is why SMART picks the filter per question instead of using one fixed scope."
 
-The 20-question Foundry comparison did **not** show an overall SMART win:
+The recorded 20-question Foundry comparison below predates routing: SMART then used a **fixed
+contract filter** and did **not** show an overall win:
 overall completeness was **4.55 RAW vs 3.45 SMART**; contract-only means were
 **4.36 vs 4.29**. SMART excluded invoice, policy and technical-report evidence and had more
 tool-placeholder responses. One SMART similarity grade was skipped; the completeness
-figures above were fully scored. The example is selected to explain a measured benefit,
-not presented as a representative benchmark result.
+figures above were fully scored. Rerun `fomo eval-foundry` before quoting numbers for the
+routed agent.
 
-For a quick counterexample, ask both agents:
+For a quick routing check, ask SMART:
 "How much were we invoiced for the emergency coffee airlift in March?"
-The evidence is invoice doc-019, **GBP 4,880**; the fixed contract filter excludes it.
-Intent-aware filtering is not a feature of the deployed SMART agent; section 7 measures it.
+The evidence is invoice doc-019, **GBP 4,880**; SMART should choose
+`document_type eq 'invoice'`. A fixed contract filter would exclude it (section 7).
 
 ## 7. The rigorous answer: which part of "smart" helps
 
@@ -185,8 +188,9 @@ across the board."
 
 Also measured: re-indexing alone changes nothing (H3, CI ±0.04); the routed variant reaches the
 oracle filter (H4); clean answers on distractor-heavy contract questions rose 69% → 82-85%,
-but that CI touches 0 (H1 inconclusive, 13 questions). The routed variant is router + per-type
-agents orchestrated by the evaluation harness, not one deployed agent.
+but that CI touches 0 (H1 inconclusive, 13 questions). In the ladder the routed variant is a
+Decision 1.1 router + per-type agents orchestrated by the harness; the deployed SMART agent does
+the same routing itself through its OpenAPI search tool.
 Metadata labels in these indexes were produced by Decision 1; the router used Decision 1.1.
 
 Decision 1.1 updates the **classifier**, not the generative RAG model. These recordings used

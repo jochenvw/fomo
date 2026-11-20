@@ -7,7 +7,15 @@ retrieval returns a **training deck about contract management** (doc-003) and a 
 policy** (doc-002) next to real contracts, because they share the vocabulary. The fix is not a
 better prompt but **better metadata**: a hosted *Metadata Miner* classifies every document with
 **Microsoft-Decision-1.1**, writes `document_type` to Blob metadata, a second Azure AI Search
-index makes it filterable, and *Smart RAG* filters on `document_type eq 'contract'`.
+index makes it filterable, and *Smart RAG* decides per question which `document_type` holds the
+answer ("payment terms" → `contract`) and searches only that type.
+
+Smart RAG's search tool is an **OpenAPI tool** over the Search REST API, not the built-in Search
+tool: the built-in tool fixes its filter per agent version and allows one tool per agent. The tool's
+`filter` parameter is an enum of `document_type eq '<label>'`; each option carries the classifier's
+own definition of that label, restricted to labels present in the smart index. The same text that
+labelled the documents tells the agent when to search them. The tool authenticates through the
+project connection `fomo-search-openapi` (project managed identity, Search Index Data Reader).
 
 ## 2. Components
 
@@ -33,7 +41,7 @@ corpus/originals (PDF, PPTX, DOCX, TXT) --upload, checksummed--> Blob <name>-inb
      |     list blobs -> extract text -> Decision-1 choice ->        |
      |     policy (threshold, margin, abstain) -> ETag-guarded       |
      |     metadata merge + checkpoint                               v
-     |                         smart indexer --> <name>-smart --> Smart RAG (document_type eq 'contract')
+     |                         smart indexer --> <name>-smart --> Smart RAG (document_type chosen per question)
      v
  evaluation: direct Search top-k over 5 run specs (raw, smart no filter / contract /
              desired / boost) + both agents' citations vs ground truth

@@ -38,6 +38,7 @@ BICEP_OUTPUTS = {
     "SEARCH_ENDPOINT": "search_endpoint",
     "SEARCH_SKU": "search_sku",
     "SEARCH_CONNECTION_NAME": "search_connection_name",
+    "SEARCH_OPENAPI_CONNECTION_NAME": "search_openapi_connection_name",
 }
 
 
@@ -71,6 +72,7 @@ class Environment:
     search_endpoint: str = ""
     search_sku: str = ""
     search_connection_name: str = "fomo-search"
+    search_openapi_connection_name: str = "fomo-search-openapi"
 
     deployment_name: str = ""
     extra: dict[str, Any] = field(default_factory=dict)

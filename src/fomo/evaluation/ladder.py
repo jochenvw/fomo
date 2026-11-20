@@ -406,8 +406,8 @@ def _check_search_tool(name: str, definition: dict[str, Any], index: str, filter
 
 
 def expected_tools(env: Environment, names: ParticipantNames) -> dict[str, tuple[str, str | None]]:
-    specs = agent_specs(env, names)
-    out = {s.name: (s.index, s.filter) for s in specs.values()}
+    simple = agent_specs(env, names)["simple"]
+    out = {simple.name: (simple.index, simple.filter)}
     out.update({s.name: (s.index, s.filter) for s in route_specs(env, names).values()})
     return out
 
@@ -423,23 +423,22 @@ def _comparable(definition: dict[str, Any]) -> dict[str, Any]:
 
 
 def inspect(env: Environment, names: ParticipantNames, rows: list[dict[str, Any]], judge: str) -> dict[str, Any]:
-    """Read-only checks: workshop agents exist, comparable settings, identical index contents, evidence live,
-    distinct judge model available, evaluators available, and which route agents need creating."""
+    """Read-only checks: Simple RAG exists, route agents differ from it only in index/filter, identical index
+    contents, evidence live, distinct judge model available, evaluators available, and which route agents
+    need creating. The deployed Smart RAG (OpenAPI tool, routes itself) is not a ladder variant."""
     agents = PromptAgents(env)
     project = agents.client
     existing: dict[str, dict[str, Any]] = {}
-    for name in (names.simple_rag_agent, names.smart_rag_agent):
+    for name in (names.simple_rag_agent,):
         try:
             latest = project.agents.get(name).versions.latest
         except Exception as exc:
-            raise Blocked(f"{name} not found", fix="run `fomo provision` and `fomo smart` first") from exc
+            raise Blocked(f"{name} not found", fix="run `fomo provision` first") from exc
         existing[name] = {"version": str(latest.version), "definition": latest.definition.as_dict()}
     tools = expected_tools(env, names)
     for name, info in existing.items():
         _check_search_tool(name, info["definition"], *tools[name])
-    if _comparable(existing[names.simple_rag_agent]["definition"]) != _comparable(
-            existing[names.smart_rag_agent]["definition"]):
-        raise Blocked("unfair comparison: Simple and Smart RAG differ beyond index/filter")
+    reference = _comparable(existing[names.simple_rag_agent]["definition"])
     route_agents: dict[str, dict[str, Any]] = {}
     for route, spec in route_specs(env, names).items():
         wanted = agents.definition(spec).as_dict()
@@ -450,8 +449,8 @@ def inspect(env: Environment, names: ParticipantNames, rows: list[dict[str, Any]
             state["action"] = "exists" if latest.definition.as_dict() == wanted else "update"
         except Exception:  # noqa: S110 - absent agent: planned as create
             pass
-        if _comparable(wanted) != _comparable(existing[names.smart_rag_agent]["definition"]):
-            raise Blocked(f"route agent {spec.name} would differ from Smart RAG beyond the filter")
+        if _comparable(wanted) != reference:
+            raise Blocked(f"route agent {spec.name} would differ from Simple RAG beyond index/filter")
         route_agents[route] = state
     search = SearchClient(env)
     fingerprint, smart = index_fingerprint(search, names)
@@ -756,12 +755,12 @@ def _execute(env: Environment, names: ParticipantNames, rows: list[dict[str, Any
         for route, spec in route_specs(env, names).items():
             version = agents.ensure(spec)
             log(f"route agent {spec.name} v{version} ({route})")
-        used = [names.simple_rag_agent, names.smart_rag_agent, *names.eval_route_agents]
+        used = [names.simple_rag_agent, *names.eval_route_agents]
         definitions = {n: agents.client.agents.get(n).versions.latest.definition.as_dict() for n in used}
         tools = expected_tools(env, names)
         for name, definition in definitions.items():
             _check_search_tool(name, definition, *tools[name])
-        reference = _comparable(definitions[names.smart_rag_agent])
+        reference = _comparable(definitions[names.simple_rag_agent])
         if any(_comparable(d) != reference for d in definitions.values()):
             raise Blocked("variant agents differ beyond index/filter; refusing an unfair comparison")
         state["agent_versions"] = _latest_versions(agents, used)

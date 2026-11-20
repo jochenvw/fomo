@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import copy
 import hashlib
 import json
 import time
@@ -15,7 +14,7 @@ import yaml
 from azure.ai.projects import AIProjectClient
 from azure.core.exceptions import HttpResponseError
 
-from ..agents.prompt import resolve_doc_id
+from ..agents.prompt import cited_in_text, resolve_doc_id, retrieved_doc_ids
 from ..azclient import arm, credential
 from ..config import Environment
 from ..data.corpus import CORPUS_DIR, load_manifest
@@ -103,10 +102,29 @@ def target_source(agent: dict[str, Any], rows: list[dict[str, Any]], dataset_uri
     }
 
 
+def _search_target(name: str, definition: dict[str, Any]) -> tuple[str, int | None]:
+    """(index, top_k) an agent searches: the built-in Search tool entry or the OpenAPI search path."""
+    tools = definition.get("tools", [])
+    indexes = [index for tool in tools if tool.get("type") == "azure_ai_search"
+               for index in tool["azure_ai_search"]["indexes"]]
+    paths = [(path, op) for tool in tools if tool.get("type") == "openapi"
+             for path, op in tool["openapi"]["spec"].get("paths", {}).items()]
+    if len(tools) != 1 or len(indexes) + len(paths) != 1:
+        raise Blocked(f"{name} must have exactly one search tool over exactly one index")
+    if indexes:
+        return indexes[0]["index_name"], indexes[0].get("top_k")
+    path, op = paths[0]
+    body = op["post"]["requestBody"]["content"]["application/json"]["schema"]["properties"]
+    return path.split("/")[2], body["top"]["enum"][0]
+
+
 def inspect_targets(project: Any, env: Environment, names: ParticipantNames, rows: list[dict[str, Any]],
                     judge: str) -> dict[str, Any]:
+    """Simple RAG (built-in Search tool, raw index) vs Smart RAG (OpenAPI search tool, smart index, filter
+    chosen per question). Fair when model and top_k match, Smart RAG's instructions only extend Simple RAG's,
+    and both indexes hold identical chunks."""
     agents = {}
-    comparable = []
+    settings: dict[str, dict[str, Any]] = {}
     search = SearchClient(env)
     contents: dict[str, list[tuple[str, str]]] = {}
     for role, name in (("simple", names.simple_rag_agent), ("smart", names.smart_rag_agent)):
@@ -114,20 +132,11 @@ def inspect_targets(project: Any, env: Environment, names: ParticipantNames, row
         definition = latest.definition.as_dict()
         if definition.get("kind") != "prompt":
             raise Blocked(f"{name} is not a prompt RAG agent")
-        indexes = [index for tool in definition.get("tools", []) if tool.get("type") == "azure_ai_search"
-                   for index in tool["azure_ai_search"]["indexes"]]
-        if len(indexes) != 1:
-            raise Blocked(f"{name} must reference exactly one Search index")
-        index = indexes[0]
+        index_name, top_k = _search_target(name, definition)
         agents[role] = {"name": name, "version": str(latest.version), "definition": definition}
-        normalized = copy.deepcopy(definition)
-        for tool in normalized["tools"]:
-            if tool.get("type") == "azure_ai_search":
-                for entry in tool["azure_ai_search"]["indexes"]:
-                    entry.pop("index_name", None)
-                    entry.pop("filter", None)
-        comparable.append(normalized)
-        response = search._call("POST", f"indexes/{index['index_name']}/docs/search",
+        settings[role] = {"model": definition.get("model"), "top_k": top_k,
+                          "instructions": definition.get("instructions") or ""}
+        response = search._call("POST", f"indexes/{index_name}/docs/search",
                                 {"search": "*", "top": 1000, "select": "doc_id,content"})
         if response.get("@odata.nextLink"):
             raise Blocked("index snapshot exceeds 1000 chunks; paginate before comparing")
@@ -138,9 +147,12 @@ def inspect_targets(project: Any, env: Environment, names: ParticipantNames, row
         for row in rows:
             for doc_id, quote in row["evidence"].items():
                 if _normalized(quote) not in by_doc.get(doc_id, ""):
-                    raise Blocked(f"{row['id']}: reference evidence missing from live {index['index_name']}/{doc_id}")
-    if comparable[0] != comparable[1] or contents["simple"] != contents["smart"]:
-        raise Blocked("unfair comparison: agent settings or unfiltered index contents differ beyond index/filter")
+                    raise Blocked(f"{row['id']}: reference evidence missing from live {index_name}/{doc_id}")
+    simple, smart = settings["simple"], settings["smart"]
+    if (simple["model"], simple["top_k"]) != (smart["model"], smart["top_k"]) \
+            or not smart["instructions"].startswith(simple["instructions"]) \
+            or contents["simple"] != contents["smart"]:
+        raise Blocked("unfair comparison: model, top_k, base instructions or unfiltered index contents differ")
     catalog = {e.name: e.as_dict() for e in project.evaluators.list(type="builtin")}
     for metric in METRICS:
         if f"builtin.{metric}" not in catalog:
@@ -316,9 +328,23 @@ def _citations(value: Any, titles: dict[str, str]) -> set[str]:
     return found
 
 
+def _retrieved(value: Any) -> list[str]:
+    """doc_ids returned by OpenAPI search calls (Smart RAG cites them in text, not as url_citation)."""
+    found: list[str] = []
+    if isinstance(value, dict):
+        if value.get("type") == "openapi_call_output":
+            found += retrieved_doc_ids(value.get("output", ""))
+        for child in value.values():
+            found += _retrieved(child)
+    elif isinstance(value, list):
+        for child in value:
+            found += _retrieved(child)
+    return found
+
+
 def _search_calls(value: Any) -> int:
     if isinstance(value, dict):
-        called = value.get("type") == "azure_ai_search_call" or (
+        called = value.get("type") in ("azure_ai_search_call", "openapi_call") or (
             value.get("type") in ("tool_call", "function_call") and value.get("name") == "azure_ai_search")
         return int(called) + sum(_search_calls(child) for child in value.values())
     return sum(_search_calls(child) for child in value) if isinstance(value, list) else 0
@@ -338,7 +364,7 @@ def comparison(state: dict[str, Any]) -> dict[str, Any]:
             "ungroundedness flags. Inspect judge reasons before calling these hallucinations.",
             "Reference answers and evidence are judge-only; both targets receive only the same query.",
             "Single-run seed benchmark: differences are descriptive, not statistical proof.",
-            "Smart RAG's fixed contract filter can improve contract precision while excluding other document types.",
+            "Smart RAG chooses a document_type filter per question; a wrong choice excludes relevant documents.",
         ],
     }
     for role, info in state["runs"].items():
@@ -353,7 +379,7 @@ def comparison(state: dict[str, Any]) -> dict[str, Any]:
             scores: dict[str, dict[str, Any]] = {
                 m: next((r for r in item.get("results", []) if r.get("metric") == m
                          or r.get("name") == m), {}) for m in METRICS}
-            cited = _citations(outputs, titles)
+            cited = _citations(outputs, titles) or set(cited_in_text(answer, _retrieved(outputs)))
             relevant = set(ref["source_doc_ids"])
             rows.append({"id": qid, "query": ref["query"], "category": ref["category"], "answer": answer,
                          "status": item.get("status"), "scores": scores, "cited_doc_ids": sorted(cited),

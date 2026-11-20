@@ -119,6 +119,8 @@ def _answer_dict(ans: AgentAnswer, relevant: list[str]) -> dict[str, Any]:
         "unresolved_citations": [c.title for c in ans.citations if not c.doc_id],
         "citation_precision": round(len([d for d in cited if d in relevant]) / len(cited), 3) if cited else None,
         "tool_calls": ans.tool_calls,
+        "filters": ans.filters,
+        "retrieved_doc_ids": ans.retrieved,
         "input_tokens": ans.input_tokens,
         "output_tokens": ans.output_tokens,
         "latency_ms": ans.latency_ms,
@@ -188,7 +190,8 @@ def evaluate(env: Environment, names: ParticipantNames, *, agents: str = "canoni
             "chunks_fetched": CHUNKS_PER_QUERY,
             "agent_top_k": TOP_K,
             "indexes": {"raw": names.raw_index, "smart": names.smart_index},
-            "agent_filter": {"simple": None, "smart": CONTRACT_FILTER},
+            "agent_filter": {"simple": None, "smart": "document_type chosen per question from " + ", ".join(
+                sorted({v for v in predicted.values() if v not in ("needs_review", "unclassified", "cannot_tell")}))},
             "scoring_profile": SCORING_PROFILE,
             "chat_deployment": env.chat_deployment,
             "embedding_deployment": env.embedding_deployment,

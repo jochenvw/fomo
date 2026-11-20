@@ -75,6 +75,12 @@ When IT deploys Foundry with private endpoints and agent VNet injection, preflig
 - **Managed-identity RBAC:** Search -> Storage *Storage Blob Data Reader*; Search -> Foundry
   *Cognitive Services OpenAI User*; Foundry project/account -> Search *Search Index Data Reader*
   (+ *Search Service Contributor*). Each fix names the role, principal ID and scope for IT.
+- **Smart RAG search tool:** an OpenAPI tool calls the Search REST API through project
+  connection `fomo-search-openapi` (project managed identity). With private Search, Agent
+  Service must reach the Search private endpoint (VNet-injected agents); otherwise Smart RAG
+  calls fail while Simple RAG (built-in Search tool) still works. `fomo smart` creates the
+  connection if missing; without *Foundry Project Manager* (or owner rights on the project) ask IT
+  to deploy `infra/modules/search-connection.bicep`.
 
 ## 5. Evaluation
 
@@ -82,4 +88,5 @@ When IT deploys Foundry with private endpoints and agent VNet injection, preflig
 |---|---|---|
 | smart ≈ raw | classification not indexed | `status` → smart doc count; `smart --apply` |
 | `smart_nofilter` ≠ raw | indexes out of sync | `reset-participant --scope indexes --apply` |
-| q05/q06/q08 drop to 0 with filter | **expected**: fixed `contract` filter excludes non-contract answers | discuss; compare `smart_desired` |
+| q05/q06/q08 drop to 0 in `smart_contract` | **expected**: the fixed `contract` baseline excludes non-contract answers | compare `smart_desired`; Smart RAG routes these per question |
+| Smart RAG cites the wrong type | the agent chose an unexpected filter (shown per answer in `eval`) | sharpen that label's definition in `classifier.yaml`, rerun `fomo smart --classifier <file> --apply` |

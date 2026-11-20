@@ -14,7 +14,14 @@ from typing import Any
 
 from .. import capacity
 from ..agents.hosted import HostedMiner, build_zip
-from ..agents.prompt import CONTRACT_FILTER, PromptAgents, agent_specs
+from ..agents.prompt import (
+    PromptAgents,
+    agent_specs,
+    document_scopes,
+    ensure_openapi_connection,
+    openapi_connection_exists,
+    smart_spec,
+)
 from ..config import Environment
 from ..data.ingest import ingest_corpus
 from ..decision.client import DecisionClient
@@ -295,8 +302,9 @@ def apply_miner_run(env: Environment, names: ParticipantNames, log: RunLogger, *
 
 # ---- smart stage -----------------------------------------------------------------------------
 def plan_smart(env: Environment, names: ParticipantNames, state: dict[str, Any], *, smoke: bool = True,
-               reset: bool = False) -> Plan:
+               reset: bool = False, classifier: Path | None = None) -> Plan:
     p = _new_plan("smart", env, names)
+    cfg = load_classifier_config(classifier)
     classified = _st(state, "container").get("classified", 0)
     if not classified:
         p.notes.append("no classified blobs yet: run the miner first, otherwise every chunk is 'unclassified'")
@@ -304,17 +312,23 @@ def plan_smart(env: Environment, names: ParticipantNames, state: dict[str, Any],
           .get("disabled") else "ensure definition")
     p.add("run", f"indexer {names.smart_indexer}", ("reset + " if reset else "") + "index blob metadata as "
           "filterable document_type; wait and verify", cost=_embed_cost())
-    p.add("create", f"prompt agent {names.smart_rag_agent}", f"same model/top_k/query type as Simple RAG; "
-          f"index {names.smart_index}; fixed filter {CONTRACT_FILTER}",
+    p.add("create", f"project connection {env.search_openapi_connection_name}",
+          "OpenAPI, project managed identity -> Search (Search Index Data Reader already granted)",
+          state="exists" if openapi_connection_exists(env) else "pending")
+    p.add("create", f"prompt agent {names.smart_rag_agent}", "same model/top_k/hybrid search as Simple RAG; "
+          f"index {names.smart_index}; agent picks the document_type filter per question from "
+          f"{', '.join(cfg.labels)} (only types present in the index)",
           state="exists" if _agent_exists(state, "smart_rag") else "pending")
     if smoke:
         p.add("invoke", names.smart_rag_agent, "smoke test: canonical contracts question", cost=_agent_cost())
+    p.notes.append(f"routing definitions: {classifier or REFERENCE_CONFIG.name + ' (reference)'}")
     return p
 
 
 def apply_smart(env: Environment, names: ParticipantNames, log: RunLogger, *, smoke: bool = True,
-                reset: bool = False) -> dict[str, Any]:
+                reset: bool = False, classifier: Path | None = None) -> dict[str, Any]:
     search = SearchClient(env)
+    cfg = load_classifier_config(classifier)
     out: dict[str, Any] = {}
     with log.stage("smart-index"):
         search.ensure_participant(names, smart=True, pending=False)
@@ -323,22 +337,34 @@ def apply_smart(env: Environment, names: ParticipantNames, log: RunLogger, *, sm
                  f"{run.items_failed} failed ({run.seconds:.0f}s)")
         if not run.ok:
             raise SearchError(f"smart indexer {run.status}: {'; '.join(run.errors) or 'see portal'}")
-        contracts = search.wait_for_count(names.smart_index, CONTRACT_FILTER)
+        search.wait_for_count(names.smart_index)
         facets = search.facets(names.smart_index, "document_type")
         log.info("document_type facets (chunks): " + ", ".join(f"{k}={v}" for k, v in sorted(facets.items())))
-        if contracts == 0:
-            log.warning(f"filter {CONTRACT_FILTER} matches 0 chunks; Smart RAG would find nothing")
-        out["smart"] = {"run": run.__dict__, "facets": facets, "contract_chunks": contracts}
-    agents = PromptAgents(env)
+        scopes = document_scopes(cfg.criteria, list(facets), exclude=(cfg.abstain_label,))
+        unknown = sorted(set(facets) - set(scopes) - {cfg.abstain_label, "needs_review", "unclassified"})
+        if unknown:
+            log.warning(f"labels in the index but not in the classifier (not routable): {', '.join(unknown)}")
+        if not scopes:
+            raise SearchError(
+                f"no classified document types in {names.smart_index}; Smart RAG has nothing to route to",
+                fix="run the miner first (`fomo miner run --hosted --apply`), then rerun `fomo smart --apply`")
+        log.info(f"routable document types: {', '.join(scopes)}")
+        out["smart"] = {"run": run.__dict__, "facets": facets, "scopes": list(scopes)}
     with log.stage("smart-rag"):
-        version = agents.ensure(agent_specs(env, names)["smart"])
+        if ensure_openapi_connection(env):
+            log.info(f"created project connection {env.search_openapi_connection_name}")
+        agents = PromptAgents(env)
+        version = agents.ensure(smart_spec(env, names, scopes))
         log.info(f"prompt agent {names.smart_rag_agent} v{version} (index {names.smart_index}, "
-                 f"filter {CONTRACT_FILTER})")
-        out["smart_rag"] = {"name": names.smart_rag_agent, "version": version}
+                 f"filter chosen per question from {', '.join(scopes)})")
+        out["smart_rag"] = {"name": names.smart_rag_agent, "version": version, "scopes": list(scopes)}
         if smoke:
             ans = agents.ask(names.smart_rag_agent, canonical_question())
-            log.info(f"smoke: cited {', '.join(ans.cited_doc_ids) or 'nothing'} ({ans.latency_ms} ms)")
-            out["smart_rag"]["smoke"] = {"cited": ans.cited_doc_ids, "latency_ms": ans.latency_ms}
+            chosen = ", ".join(f or "no filter" for f in ans.filters) or "no search call"
+            log.info(f"smoke: filter {chosen}; cited {', '.join(ans.cited_doc_ids) or 'nothing'} "
+                     f"({ans.latency_ms} ms)")
+            out["smart_rag"]["smoke"] = {"filters": ans.filters, "cited": ans.cited_doc_ids,
+                                         "latency_ms": ans.latency_ms}
     return out
 
 
@@ -372,7 +398,7 @@ def plan_cheatcode(env: Environment, names: ParticipantNames, state: dict[str, A
     p.add("invoke", f"hosted agent {names.metadata_miner_agent}", "classify all participant blobs (delta)",
           cost=_decision_cost(25))
     p.add("write", f"blob metadata in {names.container}", "classification fields, ETag-guarded merge")
-    for a in plan_smart(env, names, state, smoke=False).actions:
+    for a in plan_smart(env, names, state, smoke=False, classifier=classifier).actions:
         p.actions.append(a)
     p.add("invoke", "evaluation", "direct Search top-k for 8 queries x 5 runs + both agents on the canonical "
           "question", cost=_agent_cost(2))
@@ -408,7 +434,7 @@ def apply_cheatcode(env: Environment, names: ParticipantNames, log: RunLogger, s
             owner=exc.owner) from exc
     out["miner_run"] = timed("miner_run", lambda: apply_miner_run(env, names, log, hosted=True, mode="delta",
                                                                    only=None, limit=None, dry_run=False))
-    out["smart"] = timed("smart", lambda: apply_smart(env, names, log, smoke=False))
+    out["smart"] = timed("smart", lambda: apply_smart(env, names, log, smoke=False, classifier=classifier))
     out["evaluation"] = timed("evaluation", lambda: run_eval(env, names, log))
     final = status(env, names)
     write_manifest(env, names, final)

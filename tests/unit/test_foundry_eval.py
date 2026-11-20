@@ -8,7 +8,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from fomo.agents.prompt import agent_specs
+from fomo.agents.prompt import agent_specs, cited_in_text, search_openapi_spec
 from fomo.errors import Blocked, WorkshopError
 from fomo.evaluation import foundry
 
@@ -68,15 +68,16 @@ def test_submission_pairs_identical_inputs_without_reference_leakage(env, names,
 
 def _inspection_mocks(monkeypatch, env, names, *, mismatch=False, missing=False):
     specs = agent_specs(env, names)
-    definitions = {}
-    for role, spec in specs.items():
-        definitions[spec.name] = {
-            "kind": "prompt", "model": spec.model, "instructions": spec.instructions,
-            "tools": [{"type": "azure_ai_search", "azure_ai_search": {"indexes": [{
-                "index_name": spec.index, "filter": spec.filter, "top_k": spec.top_k,
-                "query_type": spec.query_type,
-            }]}}],
-        }
+    simple, smart = specs["simple"], specs["smart"]
+    definitions = {
+        simple.name: {"kind": "prompt", "model": simple.model, "instructions": simple.instructions,
+                      "tools": [{"type": "azure_ai_search", "azure_ai_search": {"indexes": [{
+                          "index_name": simple.index, "filter": None, "top_k": simple.top_k,
+                          "query_type": simple.query_type}]}}]},
+        smart.name: {"kind": "prompt", "model": smart.model, "instructions": smart.instructions,
+                     "tools": [{"type": "openapi", "openapi": {"name": "contoso_search", "spec": search_openapi_spec(
+                         "https://s.search.windows.net", smart.index, smart.scopes or {}, smart.top_k)}}]},
+    }
     if mismatch:
         definitions[names.smart_rag_agent]["instructions"] = "Different instructions"
     project = Mock()
@@ -208,3 +209,12 @@ def test_search_call_detection_handles_foundry_messages_not_just_output_text():
               {"role": "assistant", "content": [{"type": "output_text", "text": "45 days"}]}]
     assert foundry._search_calls(output) == 1
     assert foundry._search_calls([{"role": "assistant", "content": "Calling search..."}]) == 0
+
+
+def test_openapi_answers_cite_only_retrieved_doc_ids_in_text():
+    output = [{"type": "openapi_call", "arguments": '{"filter": "document_type eq \'contract\'"}'},
+              {"type": "openapi_call_output", "output": json.dumps({"response": json.dumps(
+                  {"value": [{"doc_id": "doc-001"}, {"doc_id": "doc-004"}]})})}]
+    assert foundry._search_calls(output) == 1
+    text = "Net 45 (MSA, doc-001); see also doc-099 and (Rig Agreement, doc-004)."
+    assert cited_in_text(text, foundry._retrieved(output)) == ["doc-001", "doc-004"]

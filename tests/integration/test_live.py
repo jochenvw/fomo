@@ -79,12 +79,13 @@ def test_smart_index_filter_returns_only_contracts(live_env, participant):
     assert {h["document_type"] for h in hits} == {"contract"}
 
 
-def test_smart_agent_cites_documents(live_env, participant):
-    from fomo.agents.prompt import PromptAgents
+def test_smart_agent_routes_to_contracts_and_cites_documents(live_env, participant):
+    from fomo.agents.prompt import CONTRACT_FILTER, PromptAgents
 
     answer = PromptAgents(live_env).ask(participant.smart_rag_agent,
                                         "Which contracts define payment terms? Cite the documents.")
     assert answer.text.strip()
+    assert CONTRACT_FILTER in answer.filters
     assert answer.cited_doc_ids
 
 

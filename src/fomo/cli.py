@@ -89,6 +89,8 @@ def build_parser() -> argparse.ArgumentParser:
     _common(p, writes=True)
     p.add_argument("--reset", action="store_true", help="reset the smart indexer first (full re-index)")
     p.add_argument("--no-smoke", action="store_true")
+    p.add_argument("--classifier", type=Path,
+                   help="classifier.yaml whose labels/definitions Smart RAG routes on (default: reference)")
 
     p = sub.add_parser("eval", help="side-by-side evaluation (read-only; agent calls cost a little)")
     _common(p)
@@ -380,14 +382,17 @@ def cmd_smart(args: argparse.Namespace) -> int:
     ctx.require_env()
     names = ctx.names()
     state = status(ctx.env, names)
-    plan = ops.plan_smart(ctx.env, names, state, smoke=not args.no_smoke, reset=args.reset)
+    plan = ops.plan_smart(ctx.env, names, state, smoke=not args.no_smoke, reset=args.reset,
+                          classifier=args.classifier)
 
     def after(r: dict[str, Any]) -> str:
         s = r["smart"]
-        return (f"{names.smart_index}: document_type facets {s['facets']}; {s['contract_chunks']} contract chunks\n"
-                f"Smart RAG: {r['smart_rag']['name']} v{r['smart_rag']['version']}\nnext: uv run fomo eval")
+        return (f"{names.smart_index}: document_type facets {s['facets']}\n"
+                f"Smart RAG: {r['smart_rag']['name']} v{r['smart_rag']['version']}, routes per question to "
+                f"{', '.join(s['scopes'])}\nnext: uv run fomo eval")
     return write_flow(ctx, plan, lambda: ops.apply_smart(ctx.env, names, ctx.log, smoke=not args.no_smoke,
-                                                         reset=args.reset), after=after)
+                                                         reset=args.reset, classifier=args.classifier),
+                      after=after)
 
 
 def cmd_eval(args: argparse.Namespace) -> int:
@@ -715,9 +720,10 @@ def cmd_agents(args: argparse.Namespace) -> int:
     question = args.question or canonical_question()
     ans = PromptAgents(ctx.env).ask(agent, question)
     data = {"agent": agent, "question": question, "answer": ans.text, "cited": ans.cited_doc_ids,
-            "latency_ms": ans.latency_ms, "tool_calls": ans.tool_calls}
+            "filters": ans.filters, "latency_ms": ans.latency_ms, "tool_calls": ans.tool_calls}
+    routed = ("\nfilter chosen: " + ", ".join(f or "none" for f in ans.filters)) if ans.filters else ""
     ctx.out(f"{agent} ({ans.latency_ms} ms, {ans.tool_calls} search call(s))\nQ: {question}\n\n{ans.text}\n\n"
-            f"cited: {', '.join(ans.cited_doc_ids) or 'nothing'}", data)
+            f"cited: {', '.join(ans.cited_doc_ids) or 'nothing'}{routed}", data)
     return EXIT_OK
 
 

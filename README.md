@@ -16,18 +16,20 @@ not the name of the toolkit.
 
 A 60-minute hands-on workshop on **Microsoft Foundry** + **Azure AI Search**. Participants see a
 plain RAG agent cite the wrong documents, build a hosted **Metadata Miner** that classifies
-documents with **Microsoft-Decision-1.1**, and measure a **Smart RAG** agent that filters on the new
-metadata.
+documents with **Microsoft-Decision-1.1**, and measure a **Smart RAG** agent that decides per
+question which document type to search, using the new metadata.
 
 ```
  Simple RAG ──> raw index ─┐                       ┌─> smart index ──> Smart RAG
-                           ├── Blob container ─────┤      (document_type eq 'contract')
+                           ├── Blob container ─────┤   (agent picks document_type per question)
  25 synthetic docs ────────┘        ▲              │
                                     └── Metadata Miner (hosted agent, Decision-1.1)
 ```
 
-Reference result: canonical question q01, **P@5 0.40 → 1.00**. The fixed filter also **hurts**
-non-contract questions; the evaluation reports that honestly
+Reference result: canonical question q01, **P@5 0.40 → 1.00** under a contract filter. A fixed
+filter **hurts** non-contract questions; Smart RAG therefore routes each question to the right
+type (payment terms → contract, inspection → technical_report, invoiced amount → invoice). The
+evaluation shows the filter it chose and reports misses honestly
 ([sample](examples/sample-evaluation.md)).
 
 ## 1. Five-minute start

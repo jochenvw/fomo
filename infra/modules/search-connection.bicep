@@ -33,5 +33,24 @@ resource connection 'Microsoft.CognitiveServices/accounts/projects/connections@2
   }
 }
 
+// Smart RAG's OpenAPI search tool (agent-chosen document_type filter) authenticates with the
+// project managed identity; that identity already holds Search Index Data Reader.
+resource openapiConnection 'Microsoft.CognitiveServices/accounts/projects/connections@2025-06-01' = {
+  parent: project
+  name: '${connectionName}-openapi'
+  properties: {
+    category: 'OpenAPI'
+    target: searchEndpoint
+    #disable-next-line BCP036
+    authType: 'ProjectManagedIdentity'
+    audience: 'https://search.azure.com'
+    isSharedToAll: true
+    metadata: {
+      type: 'openapi'
+    }
+  }
+}
+
 output connectionId string = connection.id
 output connectionName string = connection.name
+output openapiConnectionName string = openapiConnection.name

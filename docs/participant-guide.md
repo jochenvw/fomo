@@ -92,8 +92,11 @@ uv run fomo smart --apply
 uv run fomo agents ask smart "What payment terms apply under our supplier contracts?"
 ```
 
-Creates index `cosmic-wombat-smart` (with `document_type`) and agent `cosmic-wombat-smart-rag`
-filtered on `document_type eq 'contract'`.
+Creates index `cosmic-wombat-smart` (with `document_type`) and agent `cosmic-wombat-smart-rag`.
+The agent decides per question which document type to search: "payment terms" → contracts,
+"how much were we invoiced" → invoices. Its options and their definitions come from your
+classifier (`--classifier <file>`; default: the reference), limited to labels in the index.
+Better label definitions improve both classification and routing.
 
 ## 4. Compare (10 min)
 
@@ -108,8 +111,9 @@ Reference run (see [`examples/sample-evaluation.md`](../examples/sample-evaluati
 | q01 payment terms in supplier contracts | 0.40 | **1.00** |
 | non-contract questions (q05, q06, q08) | > 0 | **0.00** |
 
-Discussion: the filter wins where the question is about contracts and **hurts** everything else.
-The `smart_desired` row (per-question filter) shows what intent-aware filtering would buy.
+Discussion: a fixed contract filter wins on contract questions and **hurts** everything else. The
+`smart_desired` row (right filter per question) is what routing aims for; the agent section of the
+report shows which filter Smart RAG actually chose for each question.
 
 ### Foundry cloud evaluation
 
@@ -137,7 +141,7 @@ IDs, individual answers, judge reasons, citation metrics, separate category scor
 portal links are saved under `.foundry/results/`; `.foundry/agent-metadata.yaml` tracks the
 latest run. Groundedness uses curated reference documents, not the actual retrieved tool
 context. Latency is reported only when Foundry supplies it. Do not interpret one small run
-as statistical proof or hide non-contract regressions from the fixed contract filter.
+as statistical proof or hide non-contract misses (a wrong routing choice excludes relevant documents).
 
 To resume polling/downloading without submitting new paid runs:
 

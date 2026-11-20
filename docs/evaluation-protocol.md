@@ -13,7 +13,7 @@ Dataset: `corpus/rag_eval_v2.json`. Earlier single-run comparison: `fomo eval-fo
 |---|---|---|---|
 | `simple` | raw | none | baseline (workshop Simple RAG) |
 | `smart_nofilter` | smart | none | re-indexing alone (control) |
-| `smart_contract` | smart | `document_type eq 'contract'` | fixed metadata scope (workshop Smart RAG) |
+| `smart_contract` | smart | `document_type eq 'contract'` | fixed metadata scope (baseline; the workshop Smart RAG routes per question) |
 | `smart_routed` | smart | per question, chosen by Microsoft-Decision-1.1 | intent-aware metadata use |
 | `smart_oracle` | smart | the question's true target type | ceiling for routing |
 

@@ -56,7 +56,8 @@ retry safe reads, offer approved target-recovery choices, and inspect uncertain 
 4. `uv run fomo miner deploy --classifier .workshop/runs/<hackername>/miner/classifier.yaml`
    (hosted Foundry agent + its two least-privilege grants).
 5. `uv run fomo miner run --hosted` (delta: unchanged documents are skipped).
-6. `uv run fomo smart` (enable smart indexer, create Smart RAG with `document_type eq 'contract'`).
+6. `uv run fomo smart` (enable smart indexer, create Smart RAG, which picks the `document_type`
+   filter per question from the classifier's labels; pass `--classifier` with the participant's file).
 7. `uv run fomo eval` (read-only apart from agent calls): before/after table with actual
    top-k hits, filters and citations. Report honestly if Smart RAG does not improve.
    For scored comparisons in the Foundry portal, use

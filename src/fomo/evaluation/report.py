@@ -7,7 +7,7 @@ from typing import Any
 RUN_LABELS = {
     "raw": "Raw index (Simple RAG scope)",
     "smart_nofilter": "Smart index, no filter (fairness control)",
-    "smart_contract": "Smart index, fixed contract filter (Smart RAG scope)",
+    "smart_contract": "Smart index, fixed contract filter (fixed-scope baseline)",
     "smart_desired": "Smart index, per-question desired filter",
     "smart_boost": "Smart index, boost profile (no filter)",
 }
@@ -85,8 +85,9 @@ def markdown(report: dict[str, Any]) -> str:
                 if a.get("error"):
                     lines.append(f"- **{a['agent']}**: ERROR {a['error']}")
                     continue
+                routed = ("; filter " + ", ".join(f or "none" for f in a["filters"])) if a.get("filters") else ""
                 lines.append(f"- **{a['agent']}** - cited {', '.join(a['cited_doc_ids']) or 'nothing'}; "
-                             f"not relevant: {', '.join(a['cited_not_relevant']) or 'none'}; "
+                             f"not relevant: {', '.join(a['cited_not_relevant']) or 'none'}{routed}; "
                              f"{a['latency_ms']} ms, {a['input_tokens']} in / {a['output_tokens']} out tokens"
                              + (f", ~${a['est_usd']}" if a.get("est_usd") is not None else ""))
                 answer = " ".join(str(a["answer"]).split())
@@ -97,6 +98,8 @@ def markdown(report: dict[str, Any]) -> str:
               "comparison is not fair (e.g. an indexer still running).",
               "- The contract filter helps contract questions and **harms** others (false exclusions). "
               "That is the trade-off of a fixed scope, not a bug.",
+              "- The Smart RAG agent picks its own document_type filter per question (section 5). A wrong "
+              "pick behaves like the fixed filter on the wrong question: relevant documents are excluded.",
               "- Misclassified documents become false exclusions under a filter: check section 4.", ""]
     return "\n".join(lines)
 
@@ -121,6 +124,8 @@ def terminal_table(report: dict[str, Any]) -> str:
         if a.get("error"):
             out.append(f"{a['query_id']} {a['role']:6} ERROR {a['error'][:120]}")
         else:
+            routed = (" filter " + ",".join((f or "none").replace("document_type eq ", "") for f in a["filters"])
+                      if a.get("filters") else "")
             out.append(f"{a['query_id']} {a['role']:6} cites {','.join(a['cited_doc_ids']) or '-'}"
-                       f"  (not relevant: {','.join(a['cited_not_relevant']) or 'none'}) {a['latency_ms']}ms")
+                       f"  (not relevant: {','.join(a['cited_not_relevant']) or 'none'}){routed} {a['latency_ms']}ms")
     return "\n".join(out)
