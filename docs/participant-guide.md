@@ -1,21 +1,18 @@
 # Participant guide (60 minutes)
 
-You get a **hackername** (e.g. `cosmic-wombat`). Everything you create is prefixed with it.
-Every command below **plans first**; add `--apply` to execute. The CLI remembers your
-hackername after the first `--participant`.
+You share Foundry, AI Search and Storage, but your workshop objects have your own **hackername**
+prefix (e.g. `cosmic-wombat-a42f90`). Use your own checkout. Never use another person's prefix.
 
 ## 0. Setup (5 min, before the session if possible)
 
 ```powershell
 git clone https://github.com/jochenvw/fomo; cd fomo
 uv sync
-az login                      # pick the workshop subscription
-uv run fomo env pull --subscription <sub-id> --resource-group <rg>   # FOMO Bicep deployment, or:
-uv run fomo env discover --plan   # adopt services your IT team deployed in the confirmed group
-uv run fomo preflight --local-only
 ```
 
-With Copilot CLI: `copilot`, then *"Use the /fomo-preflight skill"*.
+With Copilot CLI: open `copilot` in the repo and paste the facilitator's
+[kickoff prompt](facilitator-control-sheet.md#private-kickoff-prompt-replace-the-three-placeholders).
+You don't need anyone else's environment file, and you don't submit a readiness report.
 The skill first checks Azure CLI sign-in and shows the signed-in username, then asks you to
 confirm your Azure directory (tenant), subscription and resource group in order before
 checking Azure readiness. It remembers the confirmed target locally in the
@@ -25,9 +22,11 @@ target changes, it asks again; confirmation does not approve
 provisioning. Missing environment configuration means Azure readiness has not yet been assessed,
 not that the Azure resources are necessarily absent.
 
-At the resource-group step, choose an **existing group** or **create a new empty group**.
+For the shared session, use the facilitator's **existing group**. For a separate new environment
+only, you can instead **create a new empty group**.
 Suggested new names: `rg-fomo-<event>` for a shared group or `rg-fomo-<hackername>` for your own.
-Both choices are saved before workshop services need to exist. Without Copilot, preview with:
+Both choices are saved before workshop services need to exist. Without Copilot, sign in with
+`az login`, select and verify the workshop subscription, then preview with:
 
 ```powershell
 uv run fomo env select --tenant <tenant-id> --subscription <sub-id> --resource-group <rg> --plan
@@ -44,23 +43,29 @@ If your IT team already deployed Foundry, Storage and Search in your group, pref
 and `uv run fomo env discover --plan` adopts them (local write only; nothing changes in Azure).
 If something is missing, preflight names exactly what to request from IT and which role you need.
 
+Once the shared services are configured, participant kickoff uses
+`uv run fomo preflight --participants <cohort-size> --init-participant`. It checks new names
+against existing indexes and containers and remembers yours in `.workshop/participant.json`
+for later commands. The random suffix does not depend on start time. The check is not an
+Azure reservation; if a first provision plan shows unexpected existing assets, stop before applying.
+
 ## 1. Baseline: Simple RAG (10 min)
 
 ```powershell
-uv run fomo provision --participant cosmic-wombat          # read the plan
-uv run fomo provision --participant cosmic-wombat --apply
+uv run fomo provision          # read the plan for your saved name
+uv run fomo provision --apply
 uv run fomo agents ask simple "What payment terms apply under our supplier contracts?"
 ```
 
-Creates: container `cosmic-wombat-inbox` with 25 documents, index `cosmic-wombat-raw`,
-agent `cosmic-wombat-simple-rag`, and your starter folder `.workshop/runs/cosmic-wombat/miner/`.
+Creates: your inbox container with 25 documents, raw index, Simple RAG agent, and starter folder
+`.workshop/runs/<your-name>/miner/`.
 
 **Look at the citations.** You will likely see `doc-003` (a *training deck about* contract
 management) and `doc-002` (a procurement *policy*). They talk like contracts but are not.
 
 ## 2. Build the Metadata Miner (20 min)
 
-Open `.workshop/runs/cosmic-wombat/miner/classifier.yaml`:
+Open `.workshop/runs/<your-name>/miner/classifier.yaml`:
 
 | Key | What you decide |
 |---|---|
@@ -72,13 +77,14 @@ Open `.workshop/runs/cosmic-wombat/miner/classifier.yaml`:
 Try it locally (read-only, ~1 s/doc):
 
 ```powershell
-uv run python .workshop/runs/cosmic-wombat/miner/try_classifier.py doc-003 doc-007 doc-018
+$name = (Get-Content .workshop\participant.json -Raw | ConvertFrom-Json).hackername
+uv run python ".workshop\runs\$name\miner\try_classifier.py" doc-003 doc-007 doc-018
 ```
 
 Deploy and run it **as a hosted Foundry agent**:
 
 ```powershell
-uv run fomo miner deploy --classifier .workshop/runs/cosmic-wombat/miner/classifier.yaml --apply   # ~60-70 s
+uv run fomo miner deploy --classifier ".workshop\runs\$name\miner\classifier.yaml" --apply   # ~60-70 s
 uv run fomo miner run --hosted --apply                                                           # ~60-90 s
 ```
 
@@ -88,11 +94,11 @@ Re-running only classifies changed blobs or a new `version`.
 ## 3. Smart RAG (10 min)
 
 ```powershell
-uv run fomo smart --apply
+uv run fomo smart --classifier ".workshop\runs\$name\miner\classifier.yaml" --apply
 uv run fomo agents ask smart "What payment terms apply under our supplier contracts?"
 ```
 
-Creates index `cosmic-wombat-smart` (with `document_type`) and agent `cosmic-wombat-smart-rag`.
+Creates index `<your-name>-smart` (with `document_type`) and agent `<your-name>-smart-rag`.
 The agent decides per question which document type to search: "payment terms" → contracts,
 "how much were we invoiced" → invoices. Its options and their definitions come from your
 classifier (`--classifier <file>`; default: the reference), limited to labels in the index.
@@ -120,12 +126,12 @@ report shows which filter Smart RAG actually chose for each question.
 For scored answer quality in the Foundry portal (not just direct Search retrieval), use:
 
 ```powershell
-uv run fomo eval-foundry --participant cosmic-wombat --suite smoke --plan
-uv run fomo eval-foundry --participant cosmic-wombat --suite smoke --apply
-uv run fomo eval-foundry --participant cosmic-wombat --suite full --apply
+uv run fomo eval-foundry --suite smoke --plan
+uv run fomo eval-foundry --suite smoke --apply
+uv run fomo eval-foundry --suite full --apply
 ```
 
-Replace `cosmic-wombat` with your participant name. The default is a four-question smoke
+The default is a four-question smoke
 suite; the full versioned set in `corpus/rag_eval.json` contains 14 contract questions,
 four non-contract controls and two missing-answer cases. Every reference includes actual
 corpus evidence, checked against both live indexes before submitting. References go only
@@ -159,9 +165,9 @@ paired bootstrap confidence intervals. Rules are fixed in
 [evaluation-protocol.md](evaluation-protocol.md).
 
 ```powershell
-uv run fomo eval-ladder --participant cosmic-wombat --split dev  --repeats 1           # plan
-uv run fomo eval-ladder --participant cosmic-wombat --split dev  --repeats 1 --apply   # pipeline check
-uv run fomo eval-ladder --participant cosmic-wombat --split test --repeats 3 --apply   # headline
+uv run fomo eval-ladder --split dev  --repeats 1           # plan
+uv run fomo eval-ladder --split dev  --repeats 1 --apply   # pipeline check
+uv run fomo eval-ladder --split test --repeats 3 --apply   # headline
 uv run fomo eval-ladder --resume .foundry\results\ladder\<run>\manifest.json --report-only
 ```
 

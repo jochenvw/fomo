@@ -58,6 +58,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--participants", type=int, default=40, help="planned participant count (capacity checks)")
     p.add_argument("--smoke", action="store_true", help="opt-in: 3 tiny paid model calls (chat, embedding, decision)")
     p.add_argument("--local-only", action="store_true", help="only local tooling checks (no Azure)")
+    p.add_argument("--init-participant", action="store_true",
+                   help="reuse your saved hackername or check a random one against Search/Blob and save it locally")
     p.add_argument("--fix", action="store_true", help="plan remediation for fixable findings")
     p.add_argument("--plan", action="store_true", help="with --fix: show the plan (default)")
     p.add_argument("--apply", action="store_true", help="with --fix: apply after confirmation, then re-check")
@@ -267,13 +269,21 @@ def cmd_preflight(args: argparse.Namespace) -> int:
     ctx = Ctx(args, "preflight")
     if not ctx.json:
         print(banner("robot", "🔎 FOMO Preflight"), file=sys.stderr)
-    participant = None
-    try:
-        from .config import load_participant
+    from .config import load_participant
 
-        participant = args.participant or load_participant()
-    except WorkshopError:
-        participant = None
+    participant = args.participant or load_participant()
+    if args.init_participant:
+        if args.local_only or args.participant or args.fix:
+            raise WorkshopError("--init-participant cannot be combined with --local-only, --participant or --fix")
+        ctx.require_env()
+        from .provision.participant import remember, resolve_participant
+
+        names = resolve_participant(ctx.env, None, allow_new=True)
+        if not participant:
+            remember(names)
+        participant = names.hackername
+        if not ctx.json:
+            print(f"Your hackername: {participant}", file=sys.stderr)
     report = run_preflight(ctx.env, participants=args.participants, participant=participant, smoke=args.smoke,
                            local_only=args.local_only)
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")

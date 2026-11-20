@@ -103,6 +103,38 @@ def test_preflight_mascot_is_human_output_only(monkeypatch, tmp_path, capsys, ou
         assert "[o_o]" not in path.read_text(encoding="utf-8")
 
 
+def test_preflight_kickoff_saves_and_reuses_available_name(monkeypatch, tmp_path):
+    from fomo.preflight import Report
+    from fomo.provision import participant as namespace
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(cli.Ctx, "require_env", lambda self: None)
+    candidates = iter(["cosmic-wombat-000001", "cosmic-wombat-000002", "cosmic-wombat-000003"])
+    monkeypatch.setattr("fomo.naming.generate_hackername", lambda rng: next(candidates))
+    monkeypatch.setattr(namespace, "SearchClient", lambda env: SimpleNamespace(
+        list_names=lambda kind: ["cosmic-wombat-000001-raw"]))
+    monkeypatch.setattr(namespace, "container_client", lambda env, names: SimpleNamespace(
+        exists=lambda: names.hackername.endswith("000002")))
+    checked = []
+
+    def preflight(env, **kwargs):
+        checked.append(kwargs["participant"])
+        return Report("now", 1)
+
+    monkeypatch.setattr("fomo.preflight.run_preflight", preflight)
+    for _ in range(2):
+        assert cli.main(["preflight", "--init-participant"]) == cli.EXIT_OK
+    assert checked == ["cosmic-wombat-000003"] * 2
+    assert load_participant() == checked[0]
+
+
+@pytest.mark.parametrize("extra", [["--local-only"], ["--participant", "someone-else"], ["--fix"]])
+def test_preflight_rejects_conflicting_kickoff_modes(monkeypatch, tmp_path, extra):
+    monkeypatch.chdir(tmp_path)
+    assert cli.main(["preflight", "--init-participant", *extra]) == cli.EXIT_ERROR
+    assert load_participant() is None
+
+
 @pytest.mark.parametrize("explicit_subscription", [False, True])
 @pytest.mark.parametrize("confirmation", ["matching", "different", "none"])
 def test_env_pull_remembers_target_subscription_tenant(monkeypatch, tmp_path, explicit_subscription, confirmation):

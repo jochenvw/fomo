@@ -20,6 +20,8 @@ def test_generated_names_are_valid_and_fully_derivable():
         name = generate_hackername()
         validate_hackername(name)
         ParticipantNames(name).validate()
+        _, _, suffix = name.split("-")
+        assert len(suffix) == 6 and int(suffix, 16) >= 0
 
 
 @pytest.mark.parametrize(

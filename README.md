@@ -42,7 +42,8 @@ uv run fomo env pull --subscription <sub-id> --resource-group <rg>   # FOMO Bice
 uv run fomo env discover --plan          # adopt IT-provisioned Foundry/Storage/Search in the confirmed group
 ```
 
-Every command **plans first** and changes nothing; add `--apply` (and `--yes` for non-interactive).
+Provisioning commands **plan first**; add `--apply` to execute an approved plan. Preflight
+checks Azure without changing it and writes its reports locally.
 
 | Goal | Command |
 |---|---|
@@ -96,6 +97,8 @@ uv run fomo infra deploy  --parameters infra/parameters/facilitator-new.biceppar
 uv run fomo facilitator dashboard                                       # during the session
 ```
 
+For the shared workshop, send the [participant-agent kickoff prompt](docs/facilitator-control-sheet.md)
+privately. No participant files or reports are collected.
 Customer-owned Foundry/Search/Storage: `infra/reuse-existing.bicep`. Full timeline:
 [facilitator runbook](docs/facilitator-runbook.md).
 
@@ -107,7 +110,7 @@ Customer-owned Foundry/Search/Storage: `infra/reuse-existing.bicep`. Full timeli
 | Capacity | 7 Search objects per participant; Basic ≤ 7, S1 ≤ 25, S2 ≤ 100 participants | `fomo capacity` |
 | Roles | facilitator: Owner (or Contributor + RBAC Admin) on the RG; participants: 7 scoped role assignments from Bicep, incl. 2 ABAC-limited RBAC Admin | [security-and-rbac](docs/security-and-rbac.md) |
 | Auth | Entra ID only; no keys anywhere | |
-| Region | tested in Sweden Central (needs Decision-1.1 + hosted agents) | [prerequisites](docs/prerequisites.md) |
+| Region | Sweden Central recommended and tested; other regions OK after a target rehearsal | [prerequisites](docs/prerequisites.md) |
 
 ## 4. Known limitations
 

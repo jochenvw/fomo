@@ -47,7 +47,9 @@ retry safe reads, offer approved target-recovery choices, and inspect uncertain 
    (`env discover`). Missing configuration
    means Azure readiness is unassessed; it does not prove resources are missing.
 2. Baseline: `uv run fomo provision --participant <hackername>`
-   (omit `--participant` to get a generated name; pass it explicitly so plan and apply match).
+   (reuse the name saved by participant preflight; never copy an example or another
+   participant's name. If no name was initialized, plan without `--participant` and
+   pass the generated name explicitly on apply so plan and apply match).
    Result: queryable raw index, Simple RAG agent with a cited smoke-test answer, starter in
    `.workshop/runs/<hackername>/miner/`.
 3. Participant exercise - the classifier is theirs to improve:

@@ -38,7 +38,7 @@ EVAL_ROUTES = ("any", "invoice", "policy", "technical_report", "correspondence",
 
 def generate_hackername(rng: secrets.SystemRandom | None = None) -> str:
     r = rng or secrets.SystemRandom()
-    return f"{r.choice(ADJECTIVES)}-{r.choice(ANIMALS)}"
+    return f"{r.choice(ADJECTIVES)}-{r.choice(ANIMALS)}-{r.getrandbits(24):06x}"
 
 
 def normalize_hackername(raw: str) -> str:

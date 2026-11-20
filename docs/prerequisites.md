@@ -20,7 +20,7 @@ Windows: run `$env:PYTHONIOENCODING='utf-8'` if your console shows encoding erro
 | Item | Requirement | Checked by preflight |
 |---|---|---|
 | Resource providers | `Microsoft.CognitiveServices`, `Microsoft.Search`, `Microsoft.Storage` registered | `providers.*` |
-| Region | one region with `gpt-5-mini`, `text-embedding-3-small`, `Microsoft-Decision-1.1` and Foundry hosted agents (tested: **Sweden Central**) | `models.*` |
+| Region | **Sweden Central recommended and tested**, not mandatory. Another region must support `gpt-5-mini`, `text-embedding-3-small`, `Microsoft-Decision-1.1` and Foundry hosted agents. | `models.*`; rehearse hosted deploy **and invoke** on the target |
 | Quota | chat TPM ≥ ~1k × participants; see `fomo capacity` | `capacity.chat-tpm` |
 | Search SKU | Basic ≤ 7 participants, S1 ≤ 25, S2 ≤ 100 | `capacity.search` |
 | Policy | no deny on shared-key-free Storage, public endpoint (see [troubleshooting](troubleshooting.md#hosted-networking)) | `policy.*`, `network.hosted-egress` |
@@ -44,6 +44,6 @@ uv run fomo preflight --participants 40            # read-only; ~40 s
 uv run fomo preflight --participants 40 --smoke    # + 3 tiny paid model calls
 ```
 
-Verdict `READY` / `WARNING` → go. `BLOCKED` → each finding prints the fix; `--fix` plans the
-fixable ones. Share `.workshop/preflight/readiness-*.json` (no IDs, UPNs or subscription names);
-see [`examples/sample-readiness.json`](../examples/sample-readiness.json).
+Use the findings to distinguish **usable now**, **missing but provisionable** (owner, permissions
+and approval still needed), and **blocked or unverified**. Rerun after provisioning. Model smoke
+checks do not exercise the hosted miner. Participants keep readiness reports on their own machines.

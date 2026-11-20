@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 import os
-import secrets
 
 import pytest
 
@@ -32,10 +31,6 @@ def repo_cwd(monkeypatch):
     monkeypatch.chdir(REPO_ROOT)
 
 
-def _fresh_name() -> str:
-    return f"{generate_hackername()}-{secrets.token_hex(2)}"
-
-
 def _json(capsys, argv: list[str]) -> tuple[int, dict]:
     capsys.readouterr()
     rc = cli.main([*argv, "--output", "json"])
@@ -49,7 +44,7 @@ def _cleanup(name: str) -> None:
 
 
 def test_cheatcode_end_to_end(capsys):
-    name = _fresh_name()
+    name = generate_hackername()
     try:
         assert cli.main(["cheatcode", "--participant", name, "--apply", "--yes"]) == cli.EXIT_OK
         rc, state = _json(capsys, ["status", "--participant", name])
@@ -66,7 +61,7 @@ def test_cheatcode_end_to_end(capsys):
 
 
 def test_provision_only(capsys):
-    name = _fresh_name()
+    name = generate_hackername()
     try:
         rc, _ = _json(capsys, ["provision", "--participant", name, "--apply", "--yes"])
         assert rc == cli.EXIT_OK

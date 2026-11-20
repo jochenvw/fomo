@@ -49,6 +49,16 @@ commands, JSON, report data or resource names.
 
 ## 1. Confirm and remember the Azure target
 
+**Shared-workshop kickoff:** the facilitator sends a prompt, not a settings file.
+Use its subscription ID and existing group as the proposed target for the confirmations
+below; show the matching choices rather than asking the participant to look up IDs.
+Do not offer to create a different group or provision shared services in this flow.
+If the group is inaccessible, ambiguous or incomplete, keep the blocker and name the
+facilitator/admin action. Never silently substitute the CLI default. The goal is a
+workable workshop: distinguish services usable now from those that can be provisioned
+before the session. Recommend Sweden Central for new infrastructure; another region
+is fine if the required models and hosted-miner path work there.
+
 Before Azure checks, follow **check sign-in -> show username -> confirm directory (tenant) ->
 confirm subscription -> confirm resource group**, in that order. Never infer the workshop
 target from a successful sign-in or an enabled subscription.
@@ -222,6 +232,13 @@ uv run fomo preflight --participants <N> --participant <hackername>
 
 - `<N>`: expected number of participants (ask if unknown; default 1 for a personal check).
 - Use the supplied or remembered hackername; omit `--participant` only if none is known.
+- For a participant joining the shared workshop, after target confirmation and service
+  discovery, run `uv run fomo preflight --participants <N> --init-participant` instead.
+  Explain the local save first. It reuses `.workshop/participant.json` or checks a new
+  random name against Search and Storage before saving it. Show the name and reuse it
+  for provision, status and cleanup. If the availability read fails, run ordinary
+  preflight without initialization to diagnose access; do not invent a name. For a
+  facilitator's infrastructure assessment or `--local-only`, do not initialize a participant.
 - Add `--smoke` only if the user agrees to 3 tiny paid model calls (< $0.001).
 - Add `--local-only` if Azure login is not yet possible.
 - If the environment file is missing/incomplete, complete step 1 before Azure checks.
@@ -232,9 +249,8 @@ Exit code: 0 = PASS/WARNING, 2 = at least one BLOCKED, 1 = tool error.
 
 Summarise per category: count of PASS / WARNING / BLOCKED. For every BLOCKED and WARNING item
 quote the `fix` line and say **who must act** (participant, facilitator or admin). Do not soften
-BLOCKED into success. Point to the scrubbed report
-`.workshop/preflight/readiness-<timestamp>.shareable.json` (IDs and users masked) as the file to
-send to the facilitator; the unscrubbed report stays local.
+BLOCKED into success. All reports stay local; do not ask participants to submit, upload
+or commit anything. The facilitator dashboard reads live progress from shared Search indexes.
 
 If `azure.environment` is BLOCKED, explain **missing configuration; Azure readiness not yet
 assessed**, not "Azure resources are missing". The checker returns early: resource existence,
