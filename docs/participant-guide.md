@@ -114,6 +114,10 @@ Better label definitions improve both classification and routing.
 
 ## 4. Compare (10 min)
 
+Always finish here. One or two `agents ask` answers are anecdotes; this evaluation scores both
+indexes and both agents on the full question set. Rerun it after changing the classifier or
+smart index; `fomo next` reports a stale evaluation.
+
 ```powershell
 uv run fomo eval
 ```

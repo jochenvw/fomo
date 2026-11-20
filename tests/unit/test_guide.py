@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from fomo import guide
@@ -50,8 +52,40 @@ def test_next_checkpoint_follows_live_evidence(tmp_path, kwargs, classifier, che
         path.write_text(classifier, encoding="utf-8")
     result = guide.next_checkpoint(_state(**kwargs), {}, expected_docs=25, classifier=path)
     assert result.checkpoint == checkpoint
-    assert result.done == list(guide.ORDER[:guide.ORDER.index(checkpoint)]) + (
-        ["compare-ready"] if checkpoint == "compare" else [])
+    assert result.done == list(guide.ORDER[:guide.ORDER.index(checkpoint)])
+
+
+def _eval_file(folder, stamp, *, queries=3, agents=True):
+    folder.mkdir(exist_ok=True)
+    report = {"generated_at": f"2026-11-20T{stamp}+00:00", "queries": [{"id": f"q{i}"} for i in range(queries)],
+              "agents": [{"query_id": "q0"}] if agents else []}
+    (folder / f"eval-20261120T{stamp.replace(':', '')}Z.json").write_text(json.dumps(report), encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    ("files", "indexed", "checkpoint"),
+    [
+        ([], "10:00:00", "compare"),
+        ([("11:00:00", {"queries": 1})], "10:00:00", "compare"),
+        ([("11:00:00", {"agents": False})], "10:00:00", "compare"),
+        ([("09:00:00", {})], "10:00:00", "compare"),
+        ([("11:00:00", {})], "10:00:00", "complete"),
+        ([("11:00:00", {}), ("12:00:00", {"queries": 1})], "10:00:00", "complete"),
+    ],
+)
+def test_only_a_current_full_evaluation_completes_the_workshop(tmp_path, files, indexed, checkpoint):
+    folder = tmp_path / "eval"
+    for stamp, kwargs in files:
+        _eval_file(folder, stamp, **kwargs)
+    state = _state()
+    state["smart_indexer"] = {"exists": True, "end_time": f"2026-11-20T{indexed}.000Z"}
+    path = tmp_path / "classifier.yaml"
+    path.write_text(DONE_CLASSIFIER, encoding="utf-8")
+    result = guide.next_checkpoint(state, {}, expected_docs=25, classifier=path,
+                                   evaluation=guide.latest_evaluation(folder, expected_queries=3))
+    assert result.checkpoint == checkpoint
+    assert result.position == len(guide.ORDER)
+    assert (result.done == list(guide.ORDER)) is (checkpoint == "complete")
 
 
 @pytest.mark.parametrize("broken", ["container", "agents"])

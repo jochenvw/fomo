@@ -7,7 +7,9 @@ not missing: the guide then asks for a status check instead of suggesting a rebu
 
 from __future__ import annotations
 
+import json
 from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -76,14 +78,15 @@ CHECKPOINTS: tuple[Checkpoint, ...] = (
         "smart", "Build the smart index and Smart RAG",
         "A second indexer copies the blob metadata into a filterable document_type field. Smart RAG picks a "
         "document_type filter per question from your classifier's labels.",
-        "Portal -> {smart_index} -> facets on document_type. Ask Smart RAG the same question and compare "
-        "citations and the filter it chose.",
+        "Portal -> {smart_index} -> facets on document_type. Ask Smart RAG the same question as a preview of "
+        "its chosen filter; one answer is an anecdote, the evaluation in the next step is the comparison.",
         ("uv run fomo smart --classifier {run_dir}/miner/classifier.yaml",
          'uv run fomo agents ask smart "What payment terms apply under our supplier contracts?"')),
     Checkpoint(
-        "compare", "Compare Simple and Smart RAG",
-        "Same questions, both agents, actual top-k hits and citations. Filtering helps contract questions "
-        "and can hurt others when the route is wrong; the evaluation shows both.",
+        "compare", "Evaluate Simple vs Smart RAG",
+        "The required final step. The same pre-registered questions go to both indexes and both agents and "
+        "are scored against known relevant documents. Eye-balling a few chat answers misleads: filtering "
+        "helps contract questions and can hurt others, and only the full table shows both.",
         "The before/after table: precision@5 per question, chosen filters, misses on non-contract controls.",
         ("uv run fomo eval",), writes=False),
 )
@@ -105,6 +108,8 @@ class Next:
 
     @property
     def position(self) -> int:
+        if self.checkpoint == "complete":
+            return len(ORDER)
         return ORDER.index(self.checkpoint) + 1 if self.checkpoint in ORDER else 0
 
     def to_dict(self) -> dict[str, Any]:
@@ -127,11 +132,31 @@ def _fill(text: str, values: dict[str, str]) -> str:
     return text
 
 
+def _when(value: Any) -> datetime | None:
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
+
+
+def latest_evaluation(folder: Path, *, expected_queries: int) -> dict[str, Any] | None:
+    """Newest `fomo eval` report that can serve as the verdict: every question, agent answers included.
+    A subset (`--queries`) or retrieval-only run (`--agents none`) is a check, not a comparison."""
+    for path in sorted(folder.glob("eval-*.json"), reverse=True):
+        try:
+            report = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if len(report.get("queries") or []) >= expected_queries and report.get("agents"):
+            return {"path": str(path), "generated_at": report.get("generated_at"),
+                    "summary": report.get("summary") or {}}
+    return None
+
+
 def build(checkpoint: str, values: dict[str, str], *, reason: str = "", unknown: list[str] | None = None) -> Next:
     c = BY_ID[checkpoint]
     done = list(ORDER[:ORDER.index(checkpoint)])
-    if checkpoint == "compare":
-        done.append("compare-ready")
     return Next(c.id, c.title, _fill(c.why, values), _fill(c.see, values), [_fill(x, values) for x in c.commands],
                 c.writes, done=done, reason=reason, unknown=unknown or [])
 
@@ -142,7 +167,7 @@ def _st(state: dict[str, Any], key: str) -> dict[str, Any]:
 
 
 def next_checkpoint(state: dict[str, Any], values: dict[str, str], *, expected_docs: int,
-                    classifier: Path) -> Next:
+                    classifier: Path, evaluation: dict[str, Any] | None = None) -> Next:
     """First checkpoint whose evidence is missing. Order matches the participant guide."""
     unknown = [k for k, v in state.items() if isinstance(v, dict) and "error" in v]
     agents = _st(state, "agents")
@@ -184,15 +209,29 @@ def next_checkpoint(state: dict[str, Any], values: dict[str, str], *, expected_d
         return build("smart", values, reason="smart index has no document_type values yet")
     if not agent("smart_rag"):
         return build("smart", values, reason="Smart RAG agent not found")
-    return build("compare", values, reason=f"{classified}/{docs} documents classified; both agents exist")
+    indexed = _when(_st(state, "smart_indexer").get("end_time"))
+    evaluated = _when((evaluation or {}).get("generated_at"))
+    if evaluation is None or evaluated is None:
+        return build("compare", values, reason=f"{classified}/{docs} documents classified, both agents exist; "
+                     "no full evaluation yet, so there is no verdict")
+    if indexed and evaluated < indexed:
+        return build("compare", values, reason="the smart index changed after the last evaluation "
+                     f"({evaluation['path']}); its numbers describe an older setup")
+    return Next("complete", "Workshop complete: discuss the evaluation",
+                "The evaluation is the verdict: precision per question for both agents, the filter Smart RAG "
+                "chose, and where filtering excluded the right evidence. Conclusions come from this table, "
+                "not from individual chat answers.",
+                f"Report: {evaluation['path']}. Name one question metadata fixed and one it hurt.",
+                ["uv run fomo eval"], False, done=list(ORDER),
+                reason=f"evaluation {evaluation['generated_at']} is newer than the smart index")
 
 
 def progress_bar(n: Next) -> str:
     if not n.position:
         return ""
+    if n.checkpoint == "complete":
+        return " ".join("■" for _ in ORDER) + f"  {len(ORDER)}/{len(ORDER)} ✓"
     marks = ["■" if i < n.position - 1 else ("▶" if i == n.position - 1 else "□") for i in range(len(ORDER))]
-    if "compare-ready" in n.done:
-        marks[-1] = "▶"
     return " ".join(marks) + f"  {n.position}/{len(ORDER)}"
 
 

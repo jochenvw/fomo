@@ -387,6 +387,7 @@ def cmd_next(args: argparse.Namespace) -> int:
         result = guide.build("preflight", values, reason=reason)
     else:
         from .data.corpus import load_manifest
+        from .evaluation.runner import load_eval_queries_full
         from .provision.participant import status
 
         names = ctx.names()
@@ -394,8 +395,11 @@ def cmd_next(args: argparse.Namespace) -> int:
                   "smart_index": names.smart_index, "simple_rag": names.simple_rag_agent,
                   "metadata_miner": names.metadata_miner_agent, "run_dir": names.run_dir}
         state = status(ctx.env, names)
+        evaluation = guide.latest_evaluation(Path(names.run_dir) / "eval",
+                                             expected_queries=len(load_eval_queries_full()["queries"]))
         result = guide.next_checkpoint(state, values, expected_docs=len(load_manifest()[1]),
-                                       classifier=Path(names.run_dir) / "miner" / "classifier.yaml")
+                                       classifier=Path(names.run_dir) / "miner" / "classifier.yaml",
+                                       evaluation=evaluation)
     data = result.to_dict() | {"participant": participant}
     ctx.out((f"participant {participant}\n" if participant else "") + guide.render(result), data)
     return EXIT_OK

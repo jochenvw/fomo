@@ -47,11 +47,28 @@ Follow its "Operating model": you run commands unless the participant chooses to
 | 5 | `classifier` | Participant edits label criteria; read-only try | Probabilities for a near miss (doc-003) before and after their edit |
 | 6 | `miner-deploy` | Package classifier + miner code → hosted Foundry agent, 2 scoped grants | Agent name, version, status |
 | 7 | `miner-run` | Hosted agent writes `document_type` metadata to each blob | Classified count; label spread; one blob's metadata; `needs_review` cases |
-| 8 | `smart` | Smart indexer copies metadata into a filterable field; a Foundry IQ knowledge base derives the `document_type` filter per question from the classifier's definitions | `document_type` facets; generated filter (smoke test); Smart RAG citations and retrieved document types for the same question |
-| 9 | `compare` | Side-by-side evaluation | P@5 per question, generated filters, honest misses on non-contract questions |
+| 8 | `smart` | Smart indexer copies metadata into a filterable field; a Foundry IQ knowledge base derives the `document_type` filter per question from the classifier's definitions | `document_type` facets; generated filter (smoke test); for one question, Smart RAG citations and retrieved document types as a preview, not a verdict |
+| 9 | `compare` | **Required.** `fomo eval` scores both indexes and agents on the full question set | P@5 per question, generated filters, honest misses on non-contract questions |
+| ✓ | `complete` | A full evaluation exists that is newer than the smart index | Report path; debrief: one question metadata fixed, one it hurt |
 
 Use `why` and `see` from `fomo next` as the basis; add the mechanism in plain words.
 "Push the code" means step 6 (deploy to Foundry). Git commit/push is not part of the flow.
+
+## The evaluation is the verdict
+
+The workshop always ends with `uv run fomo eval`. Nothing else counts as a comparison.
+
+- `agents ask` answers are previews of a mechanism (which filter was chosen, which documents
+  were cited). Never say or imply "Smart RAG is better" from one or a few chat answers, and
+  stop the participant from drawing that conclusion; point to the evaluation instead.
+- `fomo next` reports `complete` only when the newest full report (all questions, agent answers
+  included) is newer than the last smart-index run. A `--queries` subset or `--agents none` run
+  is a check, not the verdict. If the classifier, miner run or smart index changed afterwards,
+  the old report is stale; run the evaluation again.
+- Present the table as it is: per-question precision for both agents, the filter Smart RAG
+  chose, and every question where filtering excluded the right evidence. Report a draw or a
+  regression as plainly as a win. Never summarise only the canonical question.
+- Never end a session, offer cleanup or call the workshop done before `complete`.
 
 ## Each turn
 
@@ -66,13 +83,16 @@ Use `why` and `see` from `fomo next` as the basis; add the mechanism in plain wo
      then offer the choice again.
    - **Skip to the end** - only when they ask: explain that `/fomo-cheatcode` uses the
      reference classifier and skips their own classifier work; it still needs its own approval.
+     It ends with the same evaluation; present that table, then rerun `fomo next`.
 4. **Execute** (when chosen): plan first, show targets/writes/cost in plain language, explicit
    yes, then the identical command with `--apply --yes`. Approval covers that one plan only.
-   For read-only steps (`classifier` try, `compare`, `agents ask`) just run them.
+   For read-only steps (`classifier` try, `compare`, `agents ask`) run them without a plan;
+   `compare` still mentions its small agent cost before running.
 5. **Show evidence:** the relevant `see` item from real output (counts, doc IDs, labels,
    facets). Offer the portal path for anyone who wants to look; never claim a result you did not read.
 6. **Checkpoint:** rerun `fomo next`, show the new progress line, name the next step in one line
    and stop. Continue only when the participant says so. One checkpoint per turn keeps the room in sync.
+   The last checkpoint is always `compare` → `complete`; there is no finish line without the evaluation.
 
 ## Commands per checkpoint
 
@@ -86,8 +106,8 @@ The baseline is split so each part gets its own explanation and approval:
 | `classifier` | none (local edit); try: `uv run python <run_dir>/miner/try_classifier.py doc-003 doc-007 doc-018` |
 | `miner-deploy` | `uv run fomo miner deploy --classifier <run_dir>/miner/classifier.yaml` |
 | `miner-run` | `uv run fomo miner run --hosted` |
-| `smart` | `uv run fomo smart --classifier <run_dir>/miner/classifier.yaml`, then `uv run fomo agents ask smart "<same question>"` |
-| `compare` | `uv run fomo eval` (read-only; small agent cost) |
+| `smart` | `uv run fomo smart --classifier <run_dir>/miner/classifier.yaml`, then optionally `uv run fomo agents ask smart "<same question>"` as a preview |
+| `compare` | `uv run fomo eval` (required; read-only apart from a small agent cost) |
 
 Use the participant's saved hackername and `run_dir`; never another participant's.
 `--step` refuses to run out of order and names the missing previous step.
