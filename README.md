@@ -1,12 +1,13 @@
 # FOMO: Foundry Organizes Metadata. Occasionally.
 
 ```text
-  ███████╗ ██████╗ ███╗   ███╗ ██████╗      [o_o]
-  ██╔════╝██╔═══██╗████╗ ████║██╔═══██╗     /|_|\   Foundry
-  █████╗  ██║   ██║██╔████╔██║██║   ██║      / \    Organizes
-  ██╔══╝  ██║   ██║██║╚██╔╝██║██║   ██║             Metadata.
-  ██║     ╚██████╔╝██║ ╚═╝ ██║╚██████╔╝             Occasionally.
-  ╚═╝      ╚═════╝ ╚═╝     ╚═╝ ╚═════╝
+        |>
+       /|\        F O M O  //  Metadata-Agent Workshop
+      / | \
+     /__|__\      [o_o]   Foundry Organizes Metadata.
+    |___|___|     /|_|\   Occasionally.
+~~~~|~~~|~~~|~~~~~/ \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                  Simple RAG  ->  Metadata Miner  ->  Smart RAG
 ```
 
 FOMO is an experimental **metadata-agent workshop**, not a promise that enrichment makes every

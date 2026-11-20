@@ -4,11 +4,12 @@ from __future__ import annotations
 
 OIL_RIG = r"""
         |>
-       /|\        FOMO  //  Metadata-Agent Workshop
+       /|\        F O M O  //  Metadata-Agent Workshop
       / | \
-     /__|__\      Simple RAG  ->  Metadata Miner  ->  Smart RAG
-    |___|___|
-~~~~|~~~|~~~|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     /__|__\      [o_o]   Foundry Organizes Metadata.
+    |___|___|     /|_|\   Occasionally.
+~~~~|~~~|~~~|~~~~~/ \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+                  Simple RAG  ->  Metadata Miner  ->  Smart RAG
 """
 
 BARREL = r"""
