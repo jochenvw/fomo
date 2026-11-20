@@ -17,6 +17,7 @@ rehearsal comparison for fallback. Follow the [runbook](facilitator-runbook.md) 
 > account; ask if there is more than one match. Remember the verified resources locally and
 > initialize or reuse my random hackername. Run full preflight and tell me my name, whether I can
 > start, and who can fix any blocker. Do not create Azure resources, make paid calls or send files.
+> When I can start, tell me to continue with `/fomo-help`.
 
 Use the customer's private workshop channel. No credentials in the prompt. No uploads, public posts
 or commits of `.workshop/`. Each participant uses their own checkout; only Azure services are shared.
@@ -28,6 +29,6 @@ or commits of `.workshop/`. Each participant uses their own checkout; only Azure
 | 00–05 | Verified target and saved name; introduce the payment-terms question. | Ask for a show of hands. The dashboard cannot see local preflight or people without a raw index. Pair anyone blocked on sign-in. |
 | 05–15 | Baseline answers the question. Identify one citation that sounds like a contract but isn't. | `uv run fomo facilitator dashboard`: look for `baseline-ready`. If indexing queues across tables, hold new starts; use the rehearsal answer while waiting. |
 | 15–35 | Edit one label criterion, test it on a near miss, deploy and run the hosted miner. | Coach the label decision. `classified-not-indexed` means metadata exists. If activation or role propagation is slow, defer that deploy and follow a neighbour; don't launch competing retries. |
-| 35–45 | Smart index has document types; ask Smart RAG the same question. | Look for `smart-index-ready` then `complete`. For one participant who wants to skip classifier work, offer `/fomo-cheatcode`: it uses the reference classifier. Explain what it skips and obtain approval first. |
-| 45–55 | Compare cited sources for the payment question and a non-contract control. | If several tables hit the same service limit, stop new work and use the saved comparison. Identify which filter was chosen and which evidence it excluded. |
+| 35–45 | Smart index has document types; ask Smart RAG the same question. | Look for `smart-index-ready` then `complete` (Smart RAG built; the evaluation is local, so the dashboard cannot see it). For one participant who wants to skip classifier work, offer `/fomo-cheatcode`: it uses the reference classifier. Explain what it skips and obtain approval first. |
+| 45–55 | Run `uv run fomo eval` (required; `fomo next` shows `complete`). Read the per-question table, not individual chat answers. | If several tables hit the same service limit, stop new work and use the saved comparison. In the table, identify which filter was chosen and which evidence it excluded, including non-contract controls. |
 | 55–60 | Debrief: name one helpful label and one case where filtering hurts. | Protect these five minutes. Distinguish observed results from the rehearsal; leave cleanup for after discussion. |

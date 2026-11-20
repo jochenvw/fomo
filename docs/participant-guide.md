@@ -194,4 +194,4 @@ The first apply creates six evaluation-only prompt agents (`<name>-smart-rag-<ty
 | Jump to the end | `uv run fomo cheatcode --apply` (~5 min, reference classifier) |
 | Redo classification | `uv run fomo reset-participant --scope metadata --apply` |
 | Something failed | [troubleshooting.md](troubleshooting.md); logs in `.workshop/runs/<name>/` |
-| Done | `uv run fomo cleanup --apply` (asks you to type `DELETE`) |
+| Done (after `fomo eval` and the debrief) | `uv run fomo cleanup --apply` (asks you to type `DELETE`) |
