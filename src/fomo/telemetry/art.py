@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-OIL_RIG = r"""
-        |>
-       /|\        F O M O  //  Metadata-Agent Workshop
-      / | \
-     /__|__\      [o_o]   Foundry Organizes Metadata.
-    |___|___|     /|_|\   Occasionally.
-~~~~|~~~|~~~|~~~~~/ \~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-                  Simple RAG  ->  Metadata Miner  ->  Smart RAG
+LOGO = r"""
+  ███████╗ ██████╗ ███╗   ███╗ ██████╗      [o_o]
+  ██╔════╝██╔═══██╗████╗ ████║██╔═══██╗     /|_|\   Foundry
+  █████╗  ██║   ██║██╔████╔██║██║   ██║      / \    Organizes
+  ██╔══╝  ██║   ██║██║╚██╔╝██║██║   ██║             Metadata.
+  ██║     ╚██████╔╝██║ ╚═╝ ██║╚██████╔╝             Occasionally.
+  ╚═╝      ╚═════╝ ╚═╝     ╚═╝ ╚═════╝
 """
 
 BARREL = r"""
@@ -27,9 +26,9 @@ ROBOT = r"""
 """
 
 
-def banner(kind: str = "rig", title: str = "") -> str:
+def banner(kind: str = "logo", title: str = "") -> str:
     if kind == "barrel":
         return BARREL.format(title=title)
     if kind == "robot":
         return ROBOT.format(title=title)
-    return OIL_RIG
+    return LOGO
