@@ -219,3 +219,12 @@ def test_knowledge_base_answers_cite_only_retrieved_doc_ids_in_text():
     assert foundry._search_calls(output) == 1
     text = "Net 45 (MSA, doc-001); see also doc-099 and (Rig Agreement, doc-004)."
     assert cited_in_text(text, foundry._retrieved(output)) == ["doc-001", "doc-004"]
+
+
+def test_eval_transcripts_count_knowledge_base_calls_and_their_documents():
+    docs = [{"content": json.dumps({"doc_id": "doc-009", "document_type": "contract"})}]
+    calls = [{"role": "assistant", "content": [{"type": "tool_call", "name": "knowledge_base_retrieve",
+                                                "arguments": {"query_variants": ["q"]}}]},
+             {"role": "tool", "content": [{"type": "tool_result", "tool_result": json.dumps({"documents": docs})}]}]
+    assert foundry._search_calls(calls) == 1
+    assert foundry._retrieved(calls) == ["doc-009"]

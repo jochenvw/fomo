@@ -16,7 +16,7 @@ import yaml
 from azure.ai.projects import AIProjectClient
 from azure.core.exceptions import HttpResponseError
 
-from ..agents.prompt import cited_in_text, resolve_doc_id, retrieved_doc_ids
+from ..agents.prompt import MCP_TOOL, cited_in_text, resolve_doc_id, retrieved_doc_ids
 from ..azclient import arm, credential
 from ..config import Environment
 from ..data.corpus import CORPUS_DIR, load_manifest
@@ -361,6 +361,8 @@ def _retrieved(value: Any) -> list[str]:
     if isinstance(value, dict):
         if value.get("type") == "mcp_call":
             found += retrieved_doc_ids(value.get("output") or "")
+        elif value.get("type") == "tool_result" and isinstance(value.get("tool_result"), str):
+            found += retrieved_doc_ids(value["tool_result"])
         for child in value.values():
             found += _retrieved(child)
     elif isinstance(value, list):
@@ -372,7 +374,8 @@ def _retrieved(value: Any) -> list[str]:
 def _search_calls(value: Any) -> int:
     if isinstance(value, dict):
         called = value.get("type") in ("azure_ai_search_call", "mcp_call") or (
-            value.get("type") in ("tool_call", "function_call") and value.get("name") == "azure_ai_search")
+            value.get("type") in ("tool_call", "function_call")
+            and value.get("name") in ("azure_ai_search", MCP_TOOL))
         return int(called) + sum(_search_calls(child) for child in value.values())
     return sum(_search_calls(child) for child in value) if isinstance(value, list) else 0
 
