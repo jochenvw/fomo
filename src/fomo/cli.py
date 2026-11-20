@@ -47,11 +47,31 @@ def _common(p: argparse.ArgumentParser, *, writes: bool = False) -> None:
         m.add_argument("--yes", "-y", action="store_true", help="approve the displayed plan non-interactively")
 
 
+COMMAND_GROUPS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("Workshop steps, in order", ("preflight", "provision", "miner", "smart", "eval")),
+    ("Where am I, try it", ("next", "status", "agents")),
+    ("Deeper evaluation (optional)", ("eval-foundry", "eval-ladder")),
+    ("Skip ahead, redo, clean up", ("cheatcode", "reset-participant", "cleanup")),
+    ("Environment and facilitator", ("env", "capacity", "infra", "facilitator")),
+)
+
+
+def _command_overview(helps: dict[str, str]) -> str:
+    lines = []
+    for i, (title, names) in enumerate(COMMAND_GROUPS):
+        lines.append(f"{title}:" + ("   (lost? run: fomo next)" if i == 0 else ""))
+        for n, name in enumerate(names, 1):
+            bullet = f"{n}." if i == 0 else " -"
+            lines.append(f"  {bullet} {name:<19}{helps[name]}")
+        lines.append("")
+    return "\n".join(lines) + "\nDetails per command: fomo <command> -h"
+
+
 def build_parser() -> argparse.ArgumentParser:
-    ap = argparse.ArgumentParser(prog="fomo", description="FOMO metadata-agent workshop: preflight, "
-                                 "provision, cheatcode and friends.")
+    ap = argparse.ArgumentParser(prog="fomo", usage="fomo [-h] [--version] <command> ...",
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--version", action="version", version=f"fomo {__version__}")
-    sub = ap.add_subparsers(dest="command", required=True, metavar="command")
+    sub = ap.add_subparsers(dest="command", required=True, metavar="command", help=argparse.SUPPRESS)
 
     p = sub.add_parser("preflight", help="readiness report (read-only unless --fix --apply)")
     _common(p)
@@ -66,7 +86,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--yes", "-y", action="store_true")
     p.add_argument("--report-dir", type=Path, default=WORKSPACE / "preflight")
 
-    p = sub.add_parser("provision", help="participant baseline: container, docs, raw index, Simple RAG, starter")
+    p = sub.add_parser("provision", help="baseline: --step upload | index | agent -> docs, raw index, Simple RAG")
     _common(p, writes=True)
     p.add_argument("--no-smoke", action="store_true", help="skip the Simple RAG smoke question")
     p.add_argument("--step", choices=("all", "upload", "index", "agent"), default="all",
@@ -75,7 +95,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("next", help="where am I in the workshop and what is the next step (read-only)")
     _common(p)
 
-    p = sub.add_parser("miner", help="hosted Metadata Miner: deploy / run")
+    p = sub.add_parser("miner", help="edit classifier.yaml, then deploy / run the hosted Metadata Miner")
     msub = p.add_subparsers(dest="miner_command", required=True, metavar="action")
     q = msub.add_parser("deploy", help="deploy the hosted agent (source ZIP) and grant its identity")
     _common(q, writes=True)
@@ -92,20 +112,20 @@ def build_parser() -> argparse.ArgumentParser:
     q.add_argument("--classifier", type=Path, help="local mode only: classifier.yaml")
     q.add_argument("--no-write", action="store_true", help="classify but do not write metadata")
 
-    p = sub.add_parser("smart", help="enable + run the smart indexer, create Smart RAG")
+    p = sub.add_parser("smart", help="smart index with document_type + Smart RAG")
     _common(p, writes=True)
     p.add_argument("--reset", action="store_true", help="reset the smart indexer first (full re-index)")
     p.add_argument("--no-smoke", action="store_true")
     p.add_argument("--classifier", type=Path,
                    help="classifier.yaml whose labels/definitions Smart RAG routes on (default: reference)")
 
-    p = sub.add_parser("eval", help="side-by-side evaluation (read-only; agent calls cost a little)")
+    p = sub.add_parser("eval", help="required finale: Simple vs Smart on all questions (small agent cost)")
     _common(p)
     p.add_argument("--agents", choices=("none", "canonical", "all"), default="canonical")
     p.add_argument("--k", type=int)
     p.add_argument("--queries", nargs="+", metavar="QID")
 
-    p = sub.add_parser("eval-foundry", help="paired cloud evaluations of Simple/Smart RAG using the Foundry SDK")
+    p = sub.add_parser("eval-foundry", help="answer quality scored by Foundry judges (paid)")
     _common(p, writes=True)
     p.add_argument("--suite", choices=("smoke", "full"), default="smoke")
     p.add_argument("--judge", help="existing chat deployment for all judges (default: workshop chat model)")
@@ -113,7 +133,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--resume", type=Path, help="resume/download a previously submitted evaluation manifest")
 
     p = sub.add_parser("eval-ladder",
-                       help="five-variant RAG comparison: Decision 1.1 routing, repeats, objective metrics, CIs")
+                       help="rigorous 5-variant comparison: repeats, confidence intervals")
     _common(p, writes=True)
     p.add_argument("--split", choices=("dev", "test", "all"), default="dev",
                    help="dev = pipeline check; test = pre-registered headline result")
@@ -189,6 +209,9 @@ def build_parser() -> argparse.ArgumentParser:
     _common(q)
     q.add_argument("--readiness-dir", type=Path, help="folder of collected readiness JSON files")
     q.add_argument("--no-agents", action="store_true", help="faster: skip agent lookups")
+
+    helps = {a.dest: a.help or "" for a in sub._choices_actions}
+    ap.description = banner().rstrip("\n") + "\n\n" + _command_overview(helps)
     return ap
 
 
@@ -858,7 +881,11 @@ def main(argv: list[str] | None = None) -> int:
         reconfigure = getattr(stream, "reconfigure", None)
         if reconfigure:
             reconfigure(encoding="utf-8", errors="replace")
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    if not (sys.argv[1:] if argv is None else argv):
+        parser.print_help()
+        return EXIT_OK
+    args = parser.parse_args(argv)
     try:
         return COMMANDS[args.command](args)
     except ApprovalDeclined as exc:

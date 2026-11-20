@@ -72,6 +72,19 @@ def test_every_command_has_a_handler():
     assert set(sub.choices) == set(cli.COMMANDS)
 
 
+def test_help_lists_every_command_once_with_numbered_workshop_steps():
+    grouped = [name for _, names in cli.COMMAND_GROUPS for name in names]
+    assert sorted(grouped) == sorted(cli.COMMANDS)
+    text = cli.build_parser().format_help()
+    assert "1. preflight" in text and "5. eval " in text
+    assert text.index("1. preflight") < text.index("3. miner") < text.index("5. eval ")
+
+
+def test_bare_command_prints_overview(capsys):
+    assert cli.main([]) == cli.EXIT_OK
+    assert "1. preflight" in capsys.readouterr().out
+
+
 def test_capacity_command_exit_codes(capsys):
     assert cli.main(["capacity", "--participants", "40"]) == cli.EXIT_BLOCKED
     assert "DOES NOT FIT" in capsys.readouterr().out
