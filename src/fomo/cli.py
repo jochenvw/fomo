@@ -75,7 +75,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("preflight", help="readiness report (read-only unless --fix --apply)")
     _common(p)
-    p.add_argument("--participants", type=int, default=40, help="planned participant count (capacity checks)")
+    p.add_argument("--participants", type=int,
+                   help="cohort size for capacity checks (facilitator; default 40, or 1 once a hackername is known)")
     p.add_argument("--smoke", action="store_true", help="opt-in: 3 tiny paid model calls (chat, embedding, decision)")
     p.add_argument("--local-only", action="store_true", help="only local tooling checks (no Azure)")
     p.add_argument("--init-participant", action="store_true",
@@ -300,6 +301,7 @@ def cmd_preflight(args: argparse.Namespace) -> int:
     from .config import load_participant
 
     participant = args.participant or load_participant()
+    names = None
     if args.init_participant:
         if args.local_only or args.participant or args.fix:
             raise WorkshopError("--init-participant cannot be combined with --local-only, --participant or --fix")
@@ -307,12 +309,13 @@ def cmd_preflight(args: argparse.Namespace) -> int:
         from .provision.participant import remember, resolve_participant
 
         names = resolve_participant(ctx.env, None, allow_new=True)
-        if not participant:
+        new_name = not participant
+        if new_name:
             remember(names)
         participant = names.hackername
-        if not ctx.json:
-            print(f"Your hackername: {participant}", file=sys.stderr)
-    report = run_preflight(ctx.env, participants=args.participants, participant=participant, smoke=args.smoke,
+    # A participant only needs room for one more; the facilitator checks the whole cohort.
+    cohort = args.participants or (1 if participant or args.init_participant else 40)
+    report = run_preflight(ctx.env, participants=cohort, participant=participant, smoke=args.smoke,
                            local_only=args.local_only)
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     args.report_dir.mkdir(parents=True, exist_ok=True)
@@ -321,11 +324,29 @@ def cmd_preflight(args: argparse.Namespace) -> int:
     full.write_text(json.dumps(report.to_dict(), indent=2, default=str), encoding="utf-8")
     share.write_text(json.dumps(scrub(report.to_dict(), report.sensitive), indent=2, default=str), encoding="utf-8")
     ctx.out(render(report) + f"\nreport: {full}\nshareable (ids/users masked): {share}", report.to_dict())
+    if names and not ctx.json:
+        sys.stdout.flush()
+        print(_hackername_card(names, new=new_name), file=sys.stderr)
     if args.fix:
         rc = _preflight_fix(ctx, report)
         if rc != EXIT_OK:
             return rc
     return EXIT_BLOCKED if report.verdict == BLOCKED else EXIT_OK
+
+
+def _hackername_card(names: ParticipantNames, *, new: bool) -> str:
+    from .config import PARTICIPANT_FILE
+
+    state = "Nothing is created yet." if new else "Reusing your saved name; `uv run fomo status` shows what exists."
+    return "\n".join([
+        "",
+        f"Your hackername: {names.hackername}   (saved in {PARTICIPANT_FILE}; every command reuses it)",
+        "Your objects are named:",
+        f"  blob container   {names.container}",
+        f"  search indexes   {names.raw_index}, {names.smart_index}",
+        f"  agents           {names.simple_rag_agent}, {names.metadata_miner_agent}, {names.smart_rag_agent}",
+        f"{state} Next: /fomo-help in Copilot CLI, or `uv run fomo next`.",
+    ])
 
 
 def _preflight_fix(ctx: Ctx, report: Any) -> int:
@@ -772,7 +793,7 @@ def _env_discover(ctx: Ctx) -> int:
         return {"path": str(path), "adopted": fields, "missing": saved.missing()}
 
     return write_flow(ctx, plan, apply, after=lambda r: f"saved discovered services to {r['path']}\n"
-                      "next: uv run fomo preflight --participants 1 --participant <hackername>")
+                      "next: uv run fomo preflight --participant <hackername>")
 
 
 def cmd_env(args: argparse.Namespace) -> int:

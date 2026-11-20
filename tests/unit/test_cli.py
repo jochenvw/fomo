@@ -143,6 +143,27 @@ def test_preflight_kickoff_saves_and_reuses_available_name(monkeypatch, tmp_path
     assert load_participant() == checked[0]
 
 
+def test_preflight_checks_one_participant_once_named_else_cohort(monkeypatch, tmp_path, capsys):
+    from fomo.preflight import Report
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(cli.Ctx, "require_env", lambda self: None)
+    monkeypatch.setattr("fomo.naming.generate_hackername", lambda rng: "cosmic-wombat-000003")
+    monkeypatch.setattr("fomo.provision.participant.SearchClient",
+                        lambda env: SimpleNamespace(list_names=lambda kind: []))
+    monkeypatch.setattr("fomo.provision.participant.container_client",
+                        lambda env, names: SimpleNamespace(exists=lambda: False))
+    cohorts = []
+    monkeypatch.setattr("fomo.preflight.run_preflight",
+                        lambda env, **kw: cohorts.append(kw["participants"]) or Report("now", kw["participants"]))
+    cli.main(["preflight", "--local-only"])
+    cli.main(["preflight", "--init-participant"])
+    cli.main(["preflight", "--participants", "25"])
+    assert cohorts == [40, 1, 25]
+    err = capsys.readouterr().err
+    assert "Your hackername: cosmic-wombat-000003" in err and "cosmic-wombat-000003-inbox" in err
+
+
 @pytest.mark.parametrize("extra", [["--local-only"], ["--participant", "someone-else"], ["--fix"]])
 def test_preflight_rejects_conflicting_kickoff_modes(monkeypatch, tmp_path, extra):
     monkeypatch.chdir(tmp_path)

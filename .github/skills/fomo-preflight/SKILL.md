@@ -218,7 +218,7 @@ owner and next command visible. A recovered check can pass; an unverified one ca
   new/different mutation. Do not delete resources as a recovery shortcut.
 
 After a fix, repeat the failed read and resume relevant checks with the same participant and
-planned cohort size. Do not repeat paid smoke calls without approval. Continue independent
+cohort size. Do not repeat paid smoke calls without approval. Continue independent
 checks where safe and label skipped/dependent checks as unassessed. Finish with what recovered,
 what remains blocked, who must act and the next concrete step; never just "try again".
 
@@ -227,16 +227,21 @@ what remains blocked, who must act and the next concrete step; never just "try a
 From the repository root:
 
 ```
-uv run fomo preflight --participants <N> --participant <hackername>
+uv run fomo preflight --participants <N>              # facilitator: whole cohort
+uv run fomo preflight --participant <hackername>      # participant: room for one more
 ```
 
-- `<N>`: expected number of participants (ask if unknown; default 1 for a personal check).
+- `--participants <N>` is the facilitator's cohort capacity check (ask for N if unknown; default
+  40). Participants omit it: with a known hackername the check defaults to one participant.
 - Use the supplied or remembered hackername; omit `--participant` only if none is known.
 - For a participant joining the shared workshop, after target confirmation and service
-  discovery, run `uv run fomo preflight --participants <N> --init-participant` instead.
+  discovery, run `uv run fomo preflight --init-participant` instead.
   Explain the local save first. It reuses `.workshop/participant.json` or checks a new
-  random name against Search and Storage before saving it. Show the name and reuse it
-  for provision, status and cleanup. If the availability read fails, run ordinary
+  random name against Search and Storage before saving it. Tell the participant their
+  hackername and the object names it prints (container, indexes, agents), say nothing is
+  created yet, and reuse the name for provision, status and cleanup. Then hand over to
+  `/fomo-help`, which builds the baseline step by step with approval. If the availability
+  read fails, run ordinary
   preflight without initialization to diagnose access; do not invent a name. For a
   facilitator's infrastructure assessment or `--local-only`, do not initialize a participant.
 - Add `--smoke` only if the user agrees to 3 tiny paid model calls (< $0.001).

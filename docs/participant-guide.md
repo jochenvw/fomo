@@ -11,7 +11,7 @@ uv sync
 ```
 
 With Copilot CLI: open `copilot` in the repo and paste the facilitator's
-[kickoff prompt](facilitator-control-sheet.md#private-kickoff-prompt-replace-the-three-placeholders).
+[kickoff prompt](facilitator-control-sheet.md#private-kickoff-prompt-replace-the-two-placeholders).
 You don't need anyone else's environment file, and you don't submit a readiness report.
 The skill first checks Azure CLI sign-in and shows the signed-in username, then asks you to
 confirm your Azure directory (tenant), subscription and resource group in order before
@@ -44,10 +44,13 @@ and `uv run fomo env discover --plan` adopts them (local write only; nothing cha
 If something is missing, preflight names exactly what to request from IT and which role you need.
 
 Once the shared services are configured, participant kickoff uses
-`uv run fomo preflight --participants <cohort-size> --init-participant`. It checks new names
-against existing indexes and containers and remembers yours in `.workshop/participant.json`
-for later commands. The random suffix does not depend on start time. The check is not an
+`uv run fomo preflight --init-participant`. It checks there is room for one more participant,
+checks new names against existing indexes and containers, remembers yours in
+`.workshop/participant.json` for later commands, and prints the names your container, indexes
+and agents will get. Nothing is created yet; `/fomo-help` (or `uv run fomo next`) takes it from
+there. The random suffix does not depend on start time. The check is not an
 Azure reservation; if a first provision plan shows unexpected existing assets, stop before applying.
+The cohort-size check (`--participants <N>`) is for the facilitator.
 
 ## 1. Baseline: Simple RAG (10 min)
 

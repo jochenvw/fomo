@@ -32,7 +32,7 @@ CHECKPOINTS: tuple[Checkpoint, ...] = (
         "Confirms your Azure target, sign-in, roles and shared services before anything is created, "
         "and gives you a hackername that prefixes every object you own.",
         "A PASS/WARNING verdict, your hackername, and named owners for any blocker.",
-        ("uv run fomo preflight --participants <cohort-size> --init-participant",), writes=False),
+        ("uv run fomo preflight --init-participant",), writes=False),
     Checkpoint(
         "upload", "Upload the documents",
         "25 synthetic Contoso Oil documents (contracts, invoices, reports, decks, policies) go into your "

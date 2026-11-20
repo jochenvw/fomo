@@ -9,15 +9,19 @@ if full preflight and a hosted deploy/run rehearsal succeed on the actual shared
 are missing, agree who can provision them and by when; permission alone isn't readiness. Save a
 rehearsal comparison for fallback. Follow the [runbook](facilitator-runbook.md) for capacity and starts.
 
-### Private kickoff prompt (replace the three placeholders)
+### Private kickoff prompt (replace the two placeholders)
 
 > Use `/fomo-preflight`. I am joining the shared workshop in subscription `<subscription-id>`,
-> existing resource group `<resource-group>`, with `<cohort-size>` participants. Verify my sign-in
+> existing resource group `<resource-group>`. Verify my sign-in
 > and confirm the target with me. Find the shared Foundry project, AI Search service and Storage
 > account; ask if there is more than one match. Remember the verified resources locally and
-> initialize or reuse my random hackername. Run full preflight and tell me my name, whether I can
-> start, and who can fix any blocker. Do not create Azure resources, make paid calls or send files.
+> initialize or reuse my random hackername. Run full preflight and tell me my name, the names my
+> container, indexes and agents will get, whether I can start, and who can fix any blocker.
+> Do not create Azure resources, make paid calls or send files.
 > When I can start, tell me to continue with `/fomo-help`.
+
+The cohort-size capacity check is yours (`uv run fomo preflight --participants <N>`); each
+participant's kickoff checks only that there is room for one more.
 
 Use the customer's private workshop channel. No credentials in the prompt. No uploads, public posts
 or commits of `.workshop/`. Each participant uses their own checkout; only Azure services are shared.

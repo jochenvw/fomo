@@ -11,7 +11,7 @@
 | T-5 days | Deploy | `uv run fomo infra deploy --parameters .local/<file>.bicepparam --apply` | 10-15 min |
 | T-5 days | Confirm target | `uv run fomo env pull` for FOMO Bicep; `env discover --plan` for IT-provisioned services | configured locally |
 | T-5 days | Rehearse | plan then apply `uv run fomo cheatcode --participant <fresh-rehearsal-name>`; save the comparison before cleaning up only that prefix | hosted deploy/invoke and both queries succeed on target |
-| T-2 days | Private kickoff | send the [participant-agent prompt](facilitator-control-sheet.md) with confirmed IDs and cohort size | participants run full preflight locally; no file handoff |
+| T-2 days | Private kickoff | send the [participant-agent prompt](facilitator-control-sheet.md) with confirmed subscription and resource group | participants run full preflight locally; no file handoff |
 | T-0 | Dashboard | `uv run fomo facilitator dashboard` | stage per discovered raw index, not an attendance list |
 | T+0 | Cleanup | see §5 | |
 
